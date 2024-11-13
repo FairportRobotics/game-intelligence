@@ -1,0 +1,5 @@
+.venv
+*.code-workspace
+.env
+the-blue-alliance-data
+*.csv
