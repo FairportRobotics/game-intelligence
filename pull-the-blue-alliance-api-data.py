@@ -7,12 +7,13 @@ from dotenv import load_dotenv, find_dotenv
 import os
 import pandas as pd
 import requests
+from tqdm import tqdm
 
 # Key settings
 load_dotenv(find_dotenv())
 headers = {"X-TBA-Auth-Key": os.environ.get("TBA_API_KEY")}
 start_year = 1992
-end_year = 2023
+end_year = 2024
 # Want to pull one year of data? Uncomment out the next line
 #start_year = end_year = 2024
 
@@ -25,9 +26,11 @@ def tba_matches(event_key: str):
     return response.json()
 
 for year in range(start_year, end_year + 1):
-    print(year)
+    #print(year)
     the_match_data = []
-    for event in tba_events(year):
+    pbar = tqdm(tba_events(year))
+    for event in pbar:
+        pbar.set_description(str(year))
         event_start_date = event["start_date"]
         event_end_date = event["end_date"]
         event_key = event["key"]
