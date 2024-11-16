@@ -3,6 +3,7 @@ import requests
 import os
 import base64
 import pandas as pd
+from tqdm import tqdm
 
 start_year = 1992
 end_year = 2025
@@ -32,14 +33,18 @@ for year in range(2006, end_year + 1):
     response = requests.request("GET", url, headers=headers, data={})
     response = response.json()
     
-    for row in response["Events"]:
+    pbar = tqdm(response["Events"])
+    for row in pbar:
+        pbar.set_description(str(year))
         row["year"] = year
         events.append(row)
 
 df = pd.DataFrame(events)
 df.to_csv("frc-events.csv", index=False)
 
-for year in range(start_year, end_year + 1):
+pbar = tqdm(range(start_year, end_year + 1))
+for year in pbar:
+    pbar.set_description(str(year))
     teams[year] = list()
     more_to_scrape = True
     page = 1
