@@ -27,7 +27,7 @@ data = []
 events = []
 
 for year in range(2006, end_year + 1):
-    print(year)
+    #print(year)
     url = f"https://frc-api.firstinspires.org/v3.0/{year}/events"
 
     response = requests.request("GET", url, headers=headers, data={})
@@ -49,7 +49,7 @@ for year in pbar:
     more_to_scrape = True
     page = 1
     while more_to_scrape:
-        print(f"{year} page {page}")
+        #print(f"{year} page {page}")
         url = f"https://frc-api.firstinspires.org/v3.0/{year}/teams?page={page}"
         response = requests.request("GET", url, headers=headers, data={})
         response = response.json()
