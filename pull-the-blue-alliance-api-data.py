@@ -15,18 +15,25 @@ headers = {"X-TBA-Auth-Key": os.environ.get("TBA_API_KEY")}
 start_year = 1992
 end_year = 2024
 # Want to pull one year of data? Uncomment out the next line
-#start_year = end_year = 2024
+# start_year = end_year = 2024
+
 
 def tba_events(year: str):
-    response = requests.get(f"https://www.thebluealliance.com/api/v3/events/{year}", headers)
+    response = requests.get(
+        f"https://www.thebluealliance.com/api/v3/events/{year}", headers
+    )
     return response.json()
+
 
 def tba_matches(event_key: str):
-    response = requests.get(f"https://www.thebluealliance.com/api/v3/event/{event_key}/matches", headers)
+    response = requests.get(
+        f"https://www.thebluealliance.com/api/v3/event/{event_key}/matches", headers
+    )
     return response.json()
 
+
 for year in range(start_year, end_year + 1):
-    #print(year)
+    # print(year)
     the_match_data = []
     pbar = tqdm(tba_events(year))
     for event in pbar:
@@ -35,10 +42,17 @@ for year in range(start_year, end_year + 1):
         event_end_date = event["end_date"]
         event_key = event["key"]
         for match in tba_matches(event_key):
-            match_data = {"year":year, "event_key": event_key, "event_start_date":event_start_date, "event_end_date": event_end_date, "match_key": match["key"], "winning_alliance": match["winning_alliance"]}
+            match_data = {
+                "year": year,
+                "event_key": event_key,
+                "event_start_date": event_start_date,
+                "event_end_date": event_end_date,
+                "match_key": match["key"],
+                "winning_alliance": match["winning_alliance"],
+            }
             for color in ["red", "blue"]:
                 teams = match["alliances"][color]["team_keys"]
-                team_keys = [ f"{color}{n}" for n in range(1, len(teams) + 1)]
+                team_keys = [f"{color}{n}" for n in range(1, len(teams) + 1)]
                 team_data = dict(zip(team_keys, teams))
                 team_data[f"{color}_score"] = match["alliances"][color]["score"]
                 match_data = {**match_data, **team_data}

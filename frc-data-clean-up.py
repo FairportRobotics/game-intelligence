@@ -9,18 +9,36 @@ with open("frc-events.csv", "r") as file:
     for row in csv.DictReader(file):
         event_lookup[f"{row['code']}_{row['year']}"] = {
             "event_date": datetime.strptime(row["dateStart"], "%Y-%m-%dT%H:%M:%S"),
-            "week": int(row["weekNumber"])
+            "week": int(row["weekNumber"]),
         }
 
-tournament_level_lookup = {
-    "Qualification": 1,
-    "Playoff":2
-}
+tournament_level_lookup = {"Qualification": 1, "Playoff": 2}
 
 
 to_int = ["year", "matchNumber"]
-to_float = ["Blue1", "Blue2", "Blue3", "Red1", "Red2", "Red3", "scoreBlueAuto", "scoreBlueFinal", "scoreBlueFoul", "scoreRedAuto", "scoreRedFinal", "scoreRedFoul"]
-to_bool = ["Blue1_dq", "Blue2_dq", "Blue3_dq", "Red1_dq", "Red2_dq", "Red3_dq", "isReplay"]
+to_float = [
+    "Blue1",
+    "Blue2",
+    "Blue3",
+    "Red1",
+    "Red2",
+    "Red3",
+    "scoreBlueAuto",
+    "scoreBlueFinal",
+    "scoreBlueFoul",
+    "scoreRedAuto",
+    "scoreRedFinal",
+    "scoreRedFoul",
+]
+to_bool = [
+    "Blue1_dq",
+    "Blue2_dq",
+    "Blue3_dq",
+    "Red1_dq",
+    "Red2_dq",
+    "Red3_dq",
+    "isReplay",
+]
 to_datetime = ["actualStartTime", "autoStartTime", "postResultTime"]
 
 with open("frc-api-data.csv", "r") as file:
@@ -57,8 +75,10 @@ with open("frc-api-data.csv", "r") as file:
 
 clean_data = pd.DataFrame(clean_data)
 clean_data = (
-    clean_data
-    .sort_values(by=["year", "week", "event_date", "event_code", "sort", "matchNumber"], ascending=[True, True, True, True, True, True])
+    clean_data.sort_values(
+        by=["year", "week", "event_date", "event_code", "sort", "matchNumber"],
+        ascending=[True, True, True, True, True, True],
+    )
     .drop("sort", axis=1)
     .reset_index(drop=True)
     .reset_index()

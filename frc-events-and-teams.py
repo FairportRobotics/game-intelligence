@@ -7,32 +7,33 @@ from tqdm import tqdm
 
 start_year = 1992
 end_year = 2025
-#end_year = 2007
+# end_year = 2007
 
-def frc_api_authorization(username:str, token:str):
+
+def frc_api_authorization(username: str, token: str):
     """Creates the FRC API authorization string"""
-    encoded = base64.b64encode(f"{username}:{token}".encode('utf-8'))
+    encoded = base64.b64encode(f"{username}:{token}".encode("utf-8"))
     return encoded.decode("utf-8")
 
-load_dotenv(find_dotenv())
-authorization = frc_api_authorization(os.environ.get("FRC_USERNAME"), os.environ.get("FRC_TOKEN"))
 
-headers = {
-  'Authorization': f'Basic {authorization}',
-  'If-Modified-Since': ''
-}
+load_dotenv(find_dotenv())
+authorization = frc_api_authorization(
+    os.environ.get("FRC_USERNAME"), os.environ.get("FRC_TOKEN")
+)
+
+headers = {"Authorization": f"Basic {authorization}", "If-Modified-Since": ""}
 
 teams = {}
 data = []
 events = []
 
 for year in range(2006, end_year + 1):
-    #print(year)
+    # print(year)
     url = f"https://frc-api.firstinspires.org/v3.0/{year}/events"
 
     response = requests.request("GET", url, headers=headers, data={})
     response = response.json()
-    
+
     pbar = tqdm(response["Events"])
     for row in pbar:
         pbar.set_description(str(year))
@@ -49,7 +50,7 @@ for year in pbar:
     more_to_scrape = True
     page = 1
     while more_to_scrape:
-        #print(f"{year} page {page}")
+        # print(f"{year} page {page}")
         url = f"https://frc-api.firstinspires.org/v3.0/{year}/teams?page={page}"
         response = requests.request("GET", url, headers=headers, data={})
         response = response.json()
@@ -57,7 +58,7 @@ for year in pbar:
             team_number = int(team["teamNumber"])
             teams[year].append(team_number)
             if team_number > 0:
-                data.append({"year":year, "team":team_number})
+                data.append({"year": year, "team": team_number})
 
         if response["pageCurrent"] == response["pageTotal"]:
             more_to_scrape = False
