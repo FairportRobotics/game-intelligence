@@ -5,7 +5,7 @@ import pandas as pd
 clean_data = []
 event_lookup = {}
 
-with open("events.csv", "r") as file:
+with open("frc-events.csv", "r") as file:
     for row in csv.DictReader(file):
         event_lookup[f"{row['code']}_{row['year']}"] = {
             "event_date": datetime.strptime(row["dateStart"], "%Y-%m-%dT%H:%M:%S"),
