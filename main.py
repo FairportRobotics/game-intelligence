@@ -16,7 +16,6 @@ def frc_api_authorization(username:str, token:str):
 load_dotenv(find_dotenv())
 authorization = frc_api_authorization(os.environ.get("FRC_USERNAME"), os.environ.get("FRC_TOKEN"))
 
-payload={}
 headers = {
   'Authorization': f'Basic {authorization}',
   'If-Modified-Since': ''
@@ -30,7 +29,7 @@ for year in range(2006, end_year + 1):
     print(year)
     url = f"https://frc-api.firstinspires.org/v3.0/{year}/events"
 
-    response = requests.request("GET", url, headers=headers, data=payload)
+    response = requests.request("GET", url, headers=headers, data={})
     response = response.json()
     
     for row in response["Events"]:
@@ -38,8 +37,8 @@ for year in range(2006, end_year + 1):
         events.append(row)
 
 df = pd.DataFrame(events)
-df.to_csv("events.csv", index=False)
-'''
+df.to_csv("frc-events.csv", index=False)
+
 for year in range(start_year, end_year + 1):
     teams[year] = list()
     more_to_scrape = True
@@ -47,7 +46,7 @@ for year in range(start_year, end_year + 1):
     while more_to_scrape:
         print(f"{year} page {page}")
         url = f"https://frc-api.firstinspires.org/v3.0/{year}/teams?page={page}"
-        response = requests.request("GET", url, headers=headers, data=payload)
+        response = requests.request("GET", url, headers=headers, data={})
         response = response.json()
         for team in response["teams"]:
             team_number = int(team["teamNumber"])
@@ -61,5 +60,4 @@ for year in range(start_year, end_year + 1):
             page += 1
 
 df = pd.DataFrame(data)
-df.to_csv("teams.csv", index=False)
-#'''
+df.to_csv("fcr-teams.csv", index=False)
