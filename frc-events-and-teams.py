@@ -43,10 +43,12 @@ for year in range(2006, end_year + 1):
 df = pd.DataFrame(events)
 df.to_csv("frc-events.csv", index=False)
 
+team_data = []
+
 pbar = tqdm(range(start_year, end_year + 1))
 for year in pbar:
     pbar.set_description(str(year))
-    teams[year] = list()
+    teams[year] = set()
     more_to_scrape = True
     page = 1
     while more_to_scrape:
@@ -56,7 +58,7 @@ for year in pbar:
         response = response.json()
         for team in response["teams"]:
             team_number = int(team["teamNumber"])
-            teams[year].append(team_number)
+            teams[year].add(team_number)
             if team_number > 0:
                 data.append({"year": year, "team": team_number})
 
@@ -64,6 +66,19 @@ for year in pbar:
             more_to_scrape = False
         else:
             page += 1
+    for team_number in teams[year]:
+        url = f"https://frc-api.firstinspires.org/v3.0/{year}/teams?teamNumber={team_number}"
+        response = requests.request("GET", url, headers=headers, data={})
+        try:
+            response = response.json()
+            team = response["teams"][0]
+            team['year'] = year
+            team_data.append(team)
+        except:
+            continue
 
 df = pd.DataFrame(data)
-df.to_csv("fcr-teams.csv", index=False)
+df.to_csv("frc-teams.csv", index=False)
+
+df = pd.DataFrame(team_data)
+df.to_csv("frc-team-data.csv", index=False)
