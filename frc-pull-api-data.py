@@ -5,7 +5,7 @@ import base64
 import pandas as pd
 from tqdm import tqdm
 
-start_year = 2006  # 1992
+start_year = 2024  # 1992
 end_year = 2024
 # end_year = start_year = 2009
 

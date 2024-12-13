@@ -12,7 +12,7 @@ from tqdm import tqdm
 # Key settings
 load_dotenv(find_dotenv())
 headers = {"X-TBA-Auth-Key": os.environ.get("TBA_API_KEY")}
-start_year = 1992
+start_year = 2010
 end_year = 2024
 # Want to pull one year of data? Uncomment out the next line
 # start_year = end_year = 2024
