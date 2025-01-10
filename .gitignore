@@ -3,3 +3,4 @@
 .env
 the-blue-alliance-data
 *.csv
+frc-data.db
