@@ -46,7 +46,7 @@ def simulate():
             if(ant < 0):
                 ant = 0
             data.append([
-                f"{currentMatch}.Red {x+1}", "aa", "2025nyro", "qm", currentMatch, f"Red {x}", team, 
+                f"{currentMatch}.Red {x+1}", "aa", "2025nyro", "qm", currentMatch, f"Red {x+1}", team, 
                 True, random.randint(0,1), al1, al2, al3, al4, ana, apa, random.randint(0,24-al1), 
                 random.randint(0,12-al2), random.randint(0,12-al3), random.randint(0,12-al4), ant,
                 apt, pickup[random.randint(0,3)], hang[random.randint(0,3)], random.randint(0,1)
@@ -69,7 +69,7 @@ def simulate():
             if(ant < 0):
                 ant = 0
             data.append([
-                f"{currentMatch}.Blue {y+1}", "aa", "2025nyro", "qm", currentMatch, f"Blue {y}", team, 
+                f"{currentMatch}.Blue {y+1}", "aa", "2025nyro", "qm", currentMatch, f"Blue {y+1}", team, 
                 True, random.randint(0,1), al1, al2, al3, al4, ana, apa, random.randint(0,24-al1), 
                 random.randint(0,12-al2), random.randint(0,12-al3), random.randint(0,12-al4), ant,
                 apt, pickup[random.randint(0,3)], hang[random.randint(0,3)], random.randint(0,1)
