@@ -12,4 +12,4 @@ for t,f in data.items():
     df = pd.read_csv(f, low_memory=False)
     if "index" in df.columns:
         df.drop('index', axis=1, inplace=True)
-    df.to_sql(name=t, con=conn)
+    df.to_sql(name=t, con=conn, index=False)
