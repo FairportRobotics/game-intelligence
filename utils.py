@@ -134,29 +134,7 @@ def beta_sd(wins, losses, priors=0.5):
 
 
 def get_viz(win_loss_data, team_number, measure = "Final"):
-    if not measure in ['Final', 'Auto', 'Teleop']:
-        raise ValueError(f'Invalid measure: {measure}')
-    w = 0
-    l = 0
-    mean_1 = []
-    std_1 = []
-    years_1 = []
-    for year in win_loss_data.keys():
-        try:
-            for f in  win_loss_data.get(year).get(measure).split("-"):
-                if f == "W":
-                    w += 1
-                else:
-                    l += 1
-                mu = beta_mu(w,l)
-                sigma = beta_sd(w,l)
-                mean_1.append(mu)
-                std_1.append(sigma)
-                years_1.append(year)
-        except:
-            continue
-
-    
+    mean_1, std_1, years_1 = getGraphData(win_loss_data, measure)
     i = 0
     current_label = ''
     labels = []
@@ -183,3 +161,31 @@ def get_viz(win_loss_data, team_number, measure = "Final"):
     plt.grid(axis = 'y')
     plt.savefig(f'viz/{team_number}-{measure}.png')
     plt.show()
+    return(None)
+
+def getGraphData(win_loss_data, measure="Final"):
+    if not measure in ['Final', 'Auto', 'Teleop']:
+        raise ValueError(f'Invalid measure: {measure}')
+    w = 0
+    l = 0
+    mean_1 = []
+    std_1 = []
+    years_1 = []
+    for year in win_loss_data.keys():
+        try:
+            for f in  win_loss_data.get(year).get(measure).split("-"):
+                if f == "W":
+                    w += 1
+                else:
+                    l += 1
+                mu = beta_mu(w,l)
+                sigma = beta_sd(w,l)
+                mean_1.append(mu)
+                std_1.append(sigma)
+                years_1.append(year)
+        except:
+            continue
+    return mean_1, std_1, years_1
+
+def currentWinProb(mean_1):
+    return(round(mean_1[-1], 3) * 100)
