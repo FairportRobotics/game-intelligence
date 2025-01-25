@@ -133,7 +133,7 @@ def beta_sd(wins, losses, priors=0.5):
     return pow((alpha * beta) / (pow(alpha + beta, 2) * (alpha + beta + 1)), 0.5)
 
 
-def get_viz(win_loss_data, team_number, measure = "Final"):
+def get_viz(win_loss_data, team_number, measure = "Final", printGraph = True):
     mean_1, std_1, years_1 = getGraphData(win_loss_data, measure)
     i = 0
     current_label = ''
@@ -161,7 +161,6 @@ def get_viz(win_loss_data, team_number, measure = "Final"):
     plt.grid(axis = 'y')
     plt.savefig(f'viz/{team_number}-{measure}.png')
     plt.show()
-    return(None)
 
 def getGraphData(win_loss_data, measure="Final"):
     if not measure in ['Final', 'Auto', 'Teleop']:
