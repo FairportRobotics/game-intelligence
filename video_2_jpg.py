@@ -15,11 +15,11 @@ def video_to_images(video_path, output_folder):
     success, image = vidcap.read()
     count = 0
     while success:
-        cv2.imwrite(f"{output_folder}/frame{count:04d}.jpg", image)
+        cv2.imwrite(f"{output_folder}/Frame{count:04d}.jpg", image)
         success, image = vidcap.read()
         count += 1
 
 if __name__ == "__main__":
-    video_path = "2025 FIRST Robotics Competition REEFSCAPE presented by Haas Game Animation [YWbxcjlY9JY].mp4"  # Replace with your video file path
-    output_folder = "images"
+    video_path = "C:/Users/pig04/Videos/Captures/long2.mp4"  # Replace with your video file path
+    output_folder = "C:/Users/pig04/Pictures/extractedFrames"
     video_to_images(video_path, output_folder)
