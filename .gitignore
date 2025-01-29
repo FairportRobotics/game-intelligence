@@ -5,3 +5,4 @@ the-blue-alliance-data
 *.csv
 frc-data.db
 viz
+data/*
