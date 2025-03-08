@@ -19,7 +19,9 @@ hang = ["p", "s", "d", "x"]
 
 def genTeams():
     while len(teams) < numTeams:
-        num = random.randint(1, 9999)
+        df = pd.read_csv("the-blue-alliance-data/teams/teams.csv", low_memory=False)
+        allTeams = df.to_dict('list')
+        num = allTeams['Key'][random.randint(0, len(allTeams['Key']))][3:None]
         if num not in teams:
             teams.add(num)
 
@@ -49,7 +51,7 @@ def simulate():
                 f"{currentMatch}.Red {x+1}", "aa", "2025nyro", "qm", currentMatch, f"Red {x+1}", team, 
                 True, random.randint(0,1), al1, al2, al3, al4, ana, apa, random.randint(0,24-al1), 
                 random.randint(0,12-al2), random.randint(0,12-al3), random.randint(0,12-al4), ant,
-                apt, pickup[random.randint(0,3)], hang[random.randint(0,3)], random.randint(0,1)
+                apt, pickup[random.randint(0,3)], hang[random.randint(0,3)]
             ])
 
         for y in range(3):
@@ -72,8 +74,42 @@ def simulate():
                 f"{currentMatch}.Blue {y+1}", "aa", "2025nyro", "qm", currentMatch, f"Blue {y+1}", team, 
                 True, random.randint(0,1), al1, al2, al3, al4, ana, apa, random.randint(0,24-al1), 
                 random.randint(0,12-al2), random.randint(0,12-al3), random.randint(0,12-al4), ant,
-                apt, pickup[random.randint(0,3)], hang[random.randint(0,3)], random.randint(0,1)
+                apt, pickup[random.randint(0,3)], hang[random.randint(0,3)]
             ])
+
+
+        scoreRed = 0
+        scoreBlue = 0
+        for q in range(3):
+            scoreRed += data[currentMatch*6-6+q][9]*3
+            scoreRed += data[currentMatch*6-6+q][10]*4
+            scoreRed += data[currentMatch*6-6+q][11]*6
+            scoreRed += data[currentMatch*6-6+q][12]*7
+            scoreRed += data[currentMatch*6-6+q][13]*2
+            scoreRed += data[currentMatch*6-6+q][14]*3
+            scoreRed += data[currentMatch*6-6+q][15]*4
+            scoreRed += data[currentMatch*6-6+q][16]*5
+
+        for w in range(3):
+            scoreBlue += data[currentMatch*6-6+q+3][9]*3
+            scoreBlue += data[currentMatch*6-6+q+3][10]*4
+            scoreBlue += data[currentMatch*6-6+q+3][11]*6
+            scoreBlue += data[currentMatch*6-6+q+3][12]*7
+            scoreBlue += data[currentMatch*6-6+q+3][13]*2
+            scoreBlue += data[currentMatch*6-6+q+3][14]*3
+            scoreBlue += data[currentMatch*6-6+q+3][15]*4
+            scoreBlue += data[currentMatch*6-6+q+3][16]*5
+
+        if scoreBlue>scoreRed:
+            for o in range(3):
+                data[currentMatch*6-6+3+o].append(True)
+            for u in range(3):
+                data[currentMatch*6-6+u].append(False)
+        else:
+            for o in range(3):
+                data[currentMatch*6-6+3+o].append(False)
+            for u in range(3):
+                data[currentMatch*6-6+u].append(True)
 
         allLeftR = True
         for l in range (3):
