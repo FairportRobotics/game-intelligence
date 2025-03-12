@@ -6,3 +6,5 @@ the-blue-alliance-data
 frc-data.db
 viz
 data/*
+*.db
+*.xlsx

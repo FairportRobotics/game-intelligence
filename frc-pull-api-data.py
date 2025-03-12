@@ -5,8 +5,8 @@ import base64
 import pandas as pd
 from tqdm import tqdm
 
-start_year = 2024  # 1992
-end_year = 2024
+start_year = 2025  # 1992
+end_year = 2025
 # end_year = start_year = 2009
 
 problem_events = set()

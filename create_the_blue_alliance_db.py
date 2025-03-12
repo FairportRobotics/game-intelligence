@@ -112,53 +112,73 @@ i = 0
 for row in tqdm(all_data, desc="Processing matches"):
     #row = all_data[0]
 
-    red_alliance_members = [col for col in row.keys() if 'red' in col and col != 'red_score']
-    blue_alliance_members = [col for col in row.keys() if 'blue' in col and col != 'blue_score']
-    red_alliance_ratings = []
-    blue_alliance_ratings = []
+    if row['red_score'] > -1 and row['blue_score'] > -1:
+        red_alliance_members = [col for col in row.keys() if 'red' in col and col != 'red_score']
+        blue_alliance_members = [col for col in row.keys() if 'blue' in col and col != 'blue_score']
+        red_alliance_ratings = []
+        blue_alliance_ratings = []
 
-    red_alliance_keys = []
-    blue_alliance_keys = []
+        red_alliance_keys = []
+        blue_alliance_keys = []
 
-    for member in red_alliance_members:
-        team_id = row[member] #int(str(row[member]).replace('frc', ''))
-        red_alliance_keys.append(team_id)
-        current_ratings[team_id] = current_ratings.get(team_id, {'mu': default.mu, 'sigma': default.sigma})
-        red_alliance_ratings.append(env.create_rating(mu=current_ratings[team_id]['mu'], sigma=current_ratings[team_id]['sigma']))
-    for member in blue_alliance_members:
-        team_id = row[member] #int(str(row[member]).replace('frc', ''))
-        blue_alliance_keys.append(team_id)
-        current_ratings[team_id] = current_ratings.get(team_id, {'mu': default.mu, 'sigma': default.sigma})
-        blue_alliance_ratings.append(env.create_rating(mu=current_ratings[team_id]['mu'], sigma=current_ratings[team_id]['sigma']))
+        for member in red_alliance_members:
+            team_id = row[member] #int(str(row[member]).replace('frc', ''))
+            red_alliance_keys.append(team_id)
+            current_ratings[team_id] = current_ratings.get(team_id, {'mu': default.mu, 'sigma': default.sigma})
+            red_alliance_ratings.append(env.create_rating(mu=current_ratings[team_id]['mu'], sigma=current_ratings[team_id]['sigma']))
+        for member in blue_alliance_members:
+            team_id = row[member] #int(str(row[member]).replace('frc', ''))
+            blue_alliance_keys.append(team_id)
+            current_ratings[team_id] = current_ratings.get(team_id, {'mu': default.mu, 'sigma': default.sigma})
+            blue_alliance_ratings.append(env.create_rating(mu=current_ratings[team_id]['mu'], sigma=current_ratings[team_id]['sigma']))
 
-    if row['winning_alliance'] == 'red':
-        ranks = [0,1]
-    else:
-        ranks = [1,0]
-        
-    red_alliance_ratings, blue_alliance_ratings = env.rate([tuple(red_alliance_ratings), tuple(blue_alliance_ratings)], ranks=ranks)
-    red_alliance_ratings = dict(zip(red_alliance_keys, red_alliance_ratings))
-    blue_alliance_ratings = dict(zip(blue_alliance_keys, blue_alliance_ratings))
+        if row['winning_alliance'] == 'red':
+            ranks = [0,1]
+        else:
+            ranks = [1,0]
+            
+        red_alliance_ratings, blue_alliance_ratings = env.rate([tuple(red_alliance_ratings), tuple(blue_alliance_ratings)], ranks=ranks)
+        red_alliance_ratings = dict(zip(red_alliance_keys, red_alliance_ratings))
+        blue_alliance_ratings = dict(zip(blue_alliance_keys, blue_alliance_ratings))
 
-    for team_id, rating in red_alliance_ratings.items():
-        current_ratings[team_id] = {'mu': rating.mu, 'sigma': rating.sigma}
-        cursor.execute('INSERT INTO trueskill (team_id, mu, sigma, match_id) VALUES (?, ?, ?, ?)', (team_id, rating.mu, rating.sigma, row['id']))
+        for team_id, rating in red_alliance_ratings.items():
+            current_ratings[team_id] = {'mu': rating.mu, 'sigma': rating.sigma}
+            cursor.execute('INSERT INTO trueskill (team_id, mu, sigma, match_id) VALUES (?, ?, ?, ?)', (team_id, rating.mu, rating.sigma, row['id']))
 
-    for team_id, rating in blue_alliance_ratings.items():
-        current_ratings[team_id] = {'mu': rating.mu, 'sigma': rating.sigma}
-        cursor.execute('INSERT INTO trueskill (team_id, mu, sigma, match_id) VALUES (?, ?, ?, ?)', (team_id, rating.mu, rating.sigma, row['id']))
+        for team_id, rating in blue_alliance_ratings.items():
+            current_ratings[team_id] = {'mu': rating.mu, 'sigma': rating.sigma}
+            cursor.execute('INSERT INTO trueskill (team_id, mu, sigma, match_id) VALUES (?, ?, ?, ?)', (team_id, rating.mu, rating.sigma, row['id']))
 
 
-    columns = ', '.join(row.keys())
-    placeholders = ':'+', :'.join(row.keys())
-    query = 'INSERT INTO match (%s) VALUES (%s)' % (columns, placeholders)
-    cursor.execute(query, row)
+        columns = ', '.join(row.keys())
+        placeholders = ':'+', :'.join(row.keys())
+        query = 'INSERT INTO match (%s) VALUES (%s)' % (columns, placeholders)
+        cursor.execute(query, row)
 
-    if i % 100 == 1:
-        db.commit()
-    i += 1
+        if i % 100 == 1:
+            db.commit()
+        i += 1
 
 #print(current_ratings)
 
 print(i)
+
+cursor.execute('''
+CREATE VIEW latest_ratings AS
+SELECT t1.* 
+FROM (SELECT MAX(match_id) AS match_id, team_id FROM trueskill GROUP BY team_id)t2
+INNER JOIN trueskill t1 
+ON t1.match_id = t2.match_id and t1.team_id = t2.team_id
+ORDER BY team_id
+''')
+
 db.commit()
+
+'''
+CREATE VIEW latest_ratings AS
+SELECT t1.* 
+FROM (SELECT MAX(match_id) AS match_id, team_id FROM trueskill GROUP BY team_id)t2
+INNER JOIN trueskill t1 
+ON t1.match_id = t2.match_id and t1.team_id = t2.team_id
+ORDER BY team_id
+'''

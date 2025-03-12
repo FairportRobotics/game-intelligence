@@ -12,10 +12,10 @@ from tqdm import tqdm
 # Key settings
 load_dotenv(find_dotenv())
 headers = {"X-TBA-Auth-Key": os.environ.get("TBA_API_KEY")}
-start_year = 2010
-end_year = 2024
+start_year = 1997
+end_year = 2000
 # Want to pull one year of data? Uncomment out the next line
-# start_year = end_year = 2024
+start_year = end_year = 2025
 
 
 def tba_events(year: str):
@@ -42,20 +42,23 @@ for year in range(start_year, end_year + 1):
         event_end_date = event["end_date"]
         event_key = event["key"]
         for match in tba_matches(event_key):
-            match_data = {
-                "year": year,
-                "event_key": event_key,
-                "event_start_date": event_start_date,
-                "event_end_date": event_end_date,
-                "match_key": match["key"],
-                "winning_alliance": match["winning_alliance"],
-            }
-            for color in ["red", "blue"]:
-                teams = match["alliances"][color]["team_keys"]
-                team_keys = [f"{color}{n}" for n in range(1, len(teams) + 1)]
-                team_data = dict(zip(team_keys, teams))
-                team_data[f"{color}_score"] = match["alliances"][color]["score"]
-                match_data = {**match_data, **team_data}
+            try:
+                match_data = {
+                    "year": year,
+                    "event_key": event_key,
+                    "event_start_date": event_start_date,
+                    "event_end_date": event_end_date,
+                    "match_key": match["key"],
+                    "winning_alliance": match["winning_alliance"],
+                }
+                for color in ["red", "blue"]:
+                    teams = match["alliances"][color]["team_keys"]
+                    team_keys = [f"{color}{n}" for n in range(1, len(teams) + 1)]
+                    team_data = dict(zip(team_keys, teams))
+                    team_data[f"{color}_score"] = match["alliances"][color]["score"]
+                    match_data = {**match_data, **team_data}
+            except:
+                continue
             the_match_data.append(match_data)
     # Save the data as a csv if it exists
     if len(the_match_data) > 0:
