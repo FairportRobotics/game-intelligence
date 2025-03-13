@@ -103,7 +103,9 @@ df = df[all_cols]
 df.to_excel('the-blue-alliance-api-data/all_data.xlsx', index=False)
 #'''
 
-junk = [f'frc{x}' for x in range(9970, 10000)]
+# These are the garbage team ids we don't want to include in the trueskill calculations
+junk = [f'frc{x}' for x in range(9900, 10000)]
+junk.append('frc0')
 
 env = trueskill.TrueSkill()
 default = trueskill.Rating()
@@ -124,13 +126,13 @@ for row in tqdm(all_data, desc="Processing matches"):
 
         for member in red_alliance_members:
             team_id = row[member] #int(str(row[member]).replace('frc', ''))
-            if team_id not in junk:
+            if team_id not in junk and team_id != 'frc':
                 red_alliance_keys.append(team_id)
                 current_ratings[team_id] = current_ratings.get(team_id, {'mu': default.mu, 'sigma': default.sigma})
                 red_alliance_ratings.append(env.create_rating(mu=current_ratings[team_id]['mu'], sigma=current_ratings[team_id]['sigma']))
         for member in blue_alliance_members:
             team_id = row[member] #int(str(row[member]).replace('frc', ''))
-            if team_id not in junk:
+            if team_id not in junk and team_id != 'frc':
                 blue_alliance_keys.append(team_id)
                 current_ratings[team_id] = current_ratings.get(team_id, {'mu': default.mu, 'sigma': default.sigma})
                 blue_alliance_ratings.append(env.create_rating(mu=current_ratings[team_id]['mu'], sigma=current_ratings[team_id]['sigma']))
