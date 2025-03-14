@@ -10,6 +10,8 @@ cursor.execute('DROP TABLE IF EXISTS match')
 cursor.execute('CREATE TABLE match (id INTEGER PRIMARY KEY, year INTEGER, event_key TEXT, match_key TEXT, event_start_date TEXT, event_end_date TEXT, winning_alliance TEXT, red1 TEXT, red2 TEXT, red3 TEXT, red4 TEXT, blue1 TEXT, blue2 TEXT, blue3 TEXT, blue4 TEXT, red_score INTEGER, blue_score INTEGER)')
 cursor.execute('DROP TABLE IF EXISTS trueskill')
 cursor.execute('CREATE TABLE trueskill (id INTEGER PRIMARY KEY AUTOINCREMENT, team_id INTEGER, mu REAL, sigma REAL, match_id INTEGER)')
+cursor.execute('DROP TABLE IF EXISTS crystal_ball')
+cursor.execute('CREATE TABLE crystal_ball (id INTEGER PRIMARY KEY AUTOINCREMENT, winning_alliance TEXT, red1_mu REAL, red1_sigma REAL, red2_mu REAL, red2_sigma REAL, red3_mu REAL, red3_sigma REAL, red4_mu REAL, red4_sigma REAL, blue1_mu REAL, blue1_sigma REAL, blue2_mu REAL, blue2_sigma REAL, blue3_mu REAL, blue3_sigma REAL, blue4_mu REAL, blue4_sigma REAL)')
 db.commit()
 
 def get_match_type_sort(row):
@@ -123,20 +125,58 @@ for row in tqdm(all_data, desc="Processing matches"):
 
         red_alliance_keys = []
         blue_alliance_keys = []
+        crystal_ball_data = {
+            'winning_alliance': row['winning_alliance'],
+            'red1_mu': -1,
+            'red1_sigma': -1,
+            'red2_mu': -1,
+            'red2_sigma': -1,
+            'red3_mu': -1,
+            'red3_sigma': -1,
+            'red4_mu': -1,
+            'red4_sigma': -1,
+            'blue1_mu': -1,
+            'blue1_sigma': -1,
+            'blue2_mu': -1,
+            'blue2_sigma': -1,
+            'blue3_mu': -1,
+            'blue3_sigma': -1,
+            'blue4_mu': -1,
+            'blue4_sigma': -1
+        }
 
+        j = 0
         for member in red_alliance_members:
             team_id = row[member] #int(str(row[member]).replace('frc', ''))
             if team_id not in junk and team_id != 'frc':
+                j += 1
                 red_alliance_keys.append(team_id)
                 current_ratings[team_id] = current_ratings.get(team_id, {'mu': default.mu, 'sigma': default.sigma})
+                crystal_ball_data[f'red{j}_mu'] = current_ratings[team_id]['mu']
+                crystal_ball_data[f'red{j}_sigma'] = current_ratings[team_id]['sigma']
                 red_alliance_ratings.append(env.create_rating(mu=current_ratings[team_id]['mu'], sigma=current_ratings[team_id]['sigma']))
+        j = 0
         for member in blue_alliance_members:
             team_id = row[member] #int(str(row[member]).replace('frc', ''))
             if team_id not in junk and team_id != 'frc':
+                j += 1
+                crystal_ball_data[f'blue{j}_mu'] = current_ratings.get(team_id, {'mu': default.mu, 'sigma': default.sigma})['mu']
+                crystal_ball_data[f'blue{j}_sigma'] = current_ratings.get(team_id, {'mu': default.mu, 'sigma': default.sigma})['sigma']
                 blue_alliance_keys.append(team_id)
                 current_ratings[team_id] = current_ratings.get(team_id, {'mu': default.mu, 'sigma': default.sigma})
+                crystal_ball_data[f'blue{j}_mu'] = current_ratings[team_id]['mu']
+                crystal_ball_data[f'blue{j}_sigma'] = current_ratings[team_id]['sigma']
                 blue_alliance_ratings.append(env.create_rating(mu=current_ratings[team_id]['mu'], sigma=current_ratings[team_id]['sigma']))
+
         if len(red_alliance_keys) > 0 and len(blue_alliance_keys) > 0:
+            # Saving the ratings before the match along with the winner in crystal_ball table
+            cursor.execute('''INSERT INTO crystal_ball 
+                           (winning_alliance, red1_mu, red1_sigma, red2_mu, red2_sigma, red3_mu, red3_sigma, red4_mu, red4_sigma, blue1_mu, blue1_sigma, blue2_mu, blue2_sigma, blue3_mu, blue3_sigma, blue4_mu, blue4_sigma)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                           (crystal_ball_data['winning_alliance'], crystal_ball_data['red1_mu'], crystal_ball_data['red1_sigma'], crystal_ball_data['red2_mu'], crystal_ball_data['red2_sigma'], crystal_ball_data['red3_mu'], crystal_ball_data['red3_sigma'], crystal_ball_data['red4_mu'], crystal_ball_data['red4_sigma'], crystal_ball_data['blue1_mu'], crystal_ball_data['blue1_sigma'], crystal_ball_data['blue2_mu'], crystal_ball_data['blue2_sigma'], crystal_ball_data['blue3_mu'], crystal_ball_data['blue3_sigma'], crystal_ball_data['blue4_mu'], crystal_ball_data['blue4_sigma'])
+                           )
+
+
             if row['winning_alliance'] == 'red':
                 ranks = [0,1]
             else:
