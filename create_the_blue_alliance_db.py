@@ -3,6 +3,8 @@ import trueskill
 from glob import glob
 import sqlite3
 from tqdm import tqdm
+import itertools
+import math
 
 db = sqlite3.connect('the-blue-alliance.db')
 cursor = db.cursor()
@@ -12,6 +14,8 @@ cursor.execute('DROP TABLE IF EXISTS trueskill')
 cursor.execute('CREATE TABLE trueskill (id INTEGER PRIMARY KEY AUTOINCREMENT, team_id INTEGER, mu REAL, sigma REAL, match_id INTEGER)')
 cursor.execute('DROP TABLE IF EXISTS crystal_ball')
 cursor.execute('CREATE TABLE crystal_ball (id INTEGER PRIMARY KEY AUTOINCREMENT, winning_alliance TEXT, red1_mu REAL, red1_sigma REAL, red2_mu REAL, red2_sigma REAL, red3_mu REAL, red3_sigma REAL, red4_mu REAL, red4_sigma REAL, blue1_mu REAL, blue1_sigma REAL, blue2_mu REAL, blue2_sigma REAL, blue3_mu REAL, blue3_sigma REAL, blue4_mu REAL, blue4_sigma REAL)')
+cursor.execute('DROP TABLE IF EXISTS predictions')
+cursor.execute('CREATE TABLE predictions (id INTEGER PRIMARY KEY AUTOINCREMENT, match_id INTEGER, wining_alliance TEXT, pred_winining_alliance TEXT, p_red_win REAL, p_blue_win REAL, p_tie REAL)')
 db.commit()
 
 def get_match_type_sort(row):
@@ -43,6 +47,25 @@ def get_payoff_sort(row):
     if not 'f' in match_key:
         return 0
     return int(match_key.split('f')[-1])
+
+def win_probability(team1, team2, BETA):
+    delta_mu = sum(r.mu for r in team1) - sum(r.mu for r in team2)
+    sum_sigma = sum(r.sigma ** 2 for r in itertools.chain(team1, team2))
+    size = len(team1) + len(team2)
+    denom = math.sqrt(size * (BETA * BETA) + sum_sigma)
+    ts = trueskill.global_env()
+    return ts.cdf(delta_mu / denom)
+
+def predict_winner(team1, team2, BETA):
+    p = win_probability(team1, team2, BETA)
+    if p == 0.5:
+        result = 'tie'
+    elif p > 0.5:
+        result = 'red'
+    else:
+        result = 'blue'
+    return result, p
+
 
 all_data = []
 for file_path in glob('the-blue-alliance-api-data/*.csv'):#['the-blue-alliance-api-data/2000.csv']:
@@ -127,22 +150,22 @@ for row in tqdm(all_data, desc="Processing matches"):
         blue_alliance_keys = []
         crystal_ball_data = {
             'winning_alliance': row['winning_alliance'],
-            'red1_mu': -1,
-            'red1_sigma': -1,
-            'red2_mu': -1,
-            'red2_sigma': -1,
-            'red3_mu': -1,
-            'red3_sigma': -1,
-            'red4_mu': -1,
-            'red4_sigma': -1,
-            'blue1_mu': -1,
-            'blue1_sigma': -1,
-            'blue2_mu': -1,
-            'blue2_sigma': -1,
-            'blue3_mu': -1,
-            'blue3_sigma': -1,
-            'blue4_mu': -1,
-            'blue4_sigma': -1
+            'red1_mu': None,
+            'red1_sigma': None,
+            'red2_mu': None,
+            'red2_sigma': None,
+            'red3_mu': None,
+            'red3_sigma': None,
+            'red4_mu': None,
+            'red4_sigma': None,
+            'blue1_mu': None,
+            'blue1_sigma': None,
+            'blue2_mu': None,
+            'blue2_sigma': None,
+            'blue3_mu': None,
+            'blue3_sigma': None,
+            'blue4_mu': None,
+            'blue4_sigma': None
         }
 
         j = 0
@@ -169,18 +192,18 @@ for row in tqdm(all_data, desc="Processing matches"):
                 blue_alliance_ratings.append(env.create_rating(mu=current_ratings[team_id]['mu'], sigma=current_ratings[team_id]['sigma']))
 
         if len(red_alliance_keys) > 0 and len(blue_alliance_keys) > 0:
-            # Saving the ratings before the match along with the winner in crystal_ball table
-            cursor.execute('''INSERT INTO crystal_ball 
-                           (winning_alliance, red1_mu, red1_sigma, red2_mu, red2_sigma, red3_mu, red3_sigma, red4_mu, red4_sigma, blue1_mu, blue1_sigma, blue2_mu, blue2_sigma, blue3_mu, blue3_sigma, blue4_mu, blue4_sigma)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                           (crystal_ball_data['winning_alliance'], crystal_ball_data['red1_mu'], crystal_ball_data['red1_sigma'], crystal_ball_data['red2_mu'], crystal_ball_data['red2_sigma'], crystal_ball_data['red3_mu'], crystal_ball_data['red3_sigma'], crystal_ball_data['red4_mu'], crystal_ball_data['red4_sigma'], crystal_ball_data['blue1_mu'], crystal_ball_data['blue1_sigma'], crystal_ball_data['blue2_mu'], crystal_ball_data['blue2_sigma'], crystal_ball_data['blue3_mu'], crystal_ball_data['blue3_sigma'], crystal_ball_data['blue4_mu'], crystal_ball_data['blue4_sigma'])
-                           )
-
-
             if row['winning_alliance'] == 'red':
                 ranks = [0,1]
-            else:
+            elif row['winning_alliance'] == 'blue':
                 ranks = [1,0]
+            else:
+                ranks = [0,0]
+                crystal_ball_data['winning_alliance'] = 'tie'
+
+            # Saving the ratings before the match along with the winner in crystal_ball table
+            cursor.execute('''INSERT INTO crystal_ball (winning_alliance, red1_mu, red1_sigma, red2_mu, red2_sigma, red3_mu, red3_sigma, red4_mu, red4_sigma, blue1_mu, blue1_sigma, blue2_mu, blue2_sigma, blue3_mu, blue3_sigma, blue4_mu, blue4_sigma) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (crystal_ball_data['winning_alliance'], crystal_ball_data['red1_mu'], crystal_ball_data['red1_sigma'], crystal_ball_data['red2_mu'], crystal_ball_data['red2_sigma'], crystal_ball_data['red3_mu'], crystal_ball_data['red3_sigma'], crystal_ball_data['red4_mu'], crystal_ball_data['red4_sigma'], crystal_ball_data['blue1_mu'], crystal_ball_data['blue1_sigma'], crystal_ball_data['blue2_mu'], crystal_ball_data['blue2_sigma'], crystal_ball_data['blue3_mu'], crystal_ball_data['blue3_sigma'], crystal_ball_data['blue4_mu'], crystal_ball_data['blue4_sigma']))
+            yhat_winner, p_win = predict_winner(red_alliance_ratings, blue_alliance_ratings, env.beta)  
+            cursor.execute('''INSERT INTO predictions (wining_alliance, pred_winining_alliance, p_red_win, match_id) VALUES (?, ?, ?, ?)''', (crystal_ball_data['winning_alliance'], yhat_winner, p_win, row['id']))          
                 
             red_alliance_ratings, blue_alliance_ratings = env.rate([tuple(red_alliance_ratings), tuple(blue_alliance_ratings)], ranks=ranks)
             red_alliance_ratings = dict(zip(red_alliance_keys, red_alliance_ratings))
