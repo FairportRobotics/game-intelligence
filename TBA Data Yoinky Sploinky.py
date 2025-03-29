@@ -6,9 +6,9 @@ import time
 from datetime import datetime
 
 # Config
-TBA_API_KEY = "nFZtwvggetBi04vdmXFjwjDyogxebfPki1bZdSw5YPVUNDDnrGASCEGyO5L28oWu"
-POWER_BI_MATCH_URL = "https://api.powerbi.com/beta/b483b752-94d3-4313-94d7-b5bc9d67193d/datasets/cbbcd1fa-e1ba-4e47-be08-ef2bbbfde46f/rows?experience=power-bi&capacityObjectId=C4909359-91F0-486E-AC12-5F1117B06CE1&workspaceObjectId=ba7d7842-fb77-4d79-b6bc-4942cc0e1de7&key=MuuMKHzQ%2FlMxcN8VPAb8X8WbG0r%2Fr%2BTYAEgWdP4Awk7IXhVek1ToP3WnDr2UMAQIPn26wzydexaIyNNl6adliw%3D%3D"
-POWER_BI_TEAM_URL = "https://api.powerbi.com/beta/b483b752-94d3-4313-94d7-b5bc9d67193d/datasets/c6ccb2bd-e62a-49f8-beb0-a012d4654928/rows?experience=power-bi&capacityObjectId=C4909359-91F0-486E-AC12-5F1117B06CE1&workspaceObjectId=ba7d7842-fb77-4d79-b6bc-4942cc0e1de7&key=kwiAwKUr5t9Tp7fX7aKmfJ%2FMASF%2BBe%2F5fTZQFfoFvBkAW8npWACLaG9Uba9AjyFgD%2F1EqKAmIZ0Nnq0r5Of0bg%3D%3D"
+TBA_API_KEY = "your_api_key_here"
+POWER_BI_MATCH_URL = "your_url_here"
+POWER_BI_TEAM_URL = "your_url_here"
 
 # Change this as necessary (ex. 2025nyro)
 EVENT_KEY = "2025nyro"
