@@ -2,6 +2,7 @@ from dotenv import load_dotenv, find_dotenv
 import os
 import requests
 from tqdm import tqdm
+import json
 
 # Key settings
 load_dotenv(find_dotenv())
@@ -47,7 +48,8 @@ for year in range(start_year, end_year + 1):
     events = tba_events(str(year))
     # Save it off
     with open(f"./raw_data/tba_events/{year}.json", "w") as f:
-        f.write(str(events))
+        f.write(json.dumps(events, indent=4))
+
     # Loop over each event to get matches
     pbar = tqdm(events)
     for event in pbar:
@@ -59,4 +61,4 @@ for year in range(start_year, end_year + 1):
         # Write the data if there is any
         if len(matches) > 0:
             with open(f"./raw_data/tba_matches/{event_key}.json", "w") as f:
-                f.write(str(matches))
+                f.write(json.dumps(matches, indent=4))
