@@ -19,7 +19,7 @@ conn.commit()
 
 mu = 100
 sigma = mu / 3
-sigma = 15
+#sigma = 15
 beta = sigma / 2
 tau = sigma / 100
 
@@ -52,34 +52,35 @@ cursor.execute(sql)
 rows = cursor.fetchall()
 for row in tqdm(rows, desc="Processing matches"):
     #print(row)
-    red_teams = [row[pos] for pos in red_possiblity if row[pos]]
-    blue_teams = [row[pos] for pos in blue_possiblity if row[pos]]
+    red_teams = [row[pos] for pos in red_possiblity if row[pos] is not None]
+    blue_teams = [row[pos] for pos in blue_possiblity if row[pos] is not None]
 
-    red_ratings = [ratings.get(team, env.create_rating()) for team in red_teams]
-    blue_ratings = [ratings.get(team, env.create_rating()) for team in blue_teams]
+    if len(red_teams) > 0 and len(blue_teams) > 0:
+        red_ratings = [ratings.get(team, env.create_rating()) for team in red_teams]
+        blue_ratings = [ratings.get(team, env.create_rating()) for team in blue_teams]
 
-    red_alliance = dict(zip(red_teams, red_ratings))
-    blue_alliance = dict(zip(blue_teams, blue_ratings))
-    match_alliances = [red_alliance, blue_alliance]
+        red_alliance = dict(zip(red_teams, red_ratings))
+        blue_alliance = dict(zip(blue_teams, blue_ratings))
+        match_alliances = [red_alliance, blue_alliance]
 
-    if row["red_score"] > row["blue_score"]:
-        ranks = [1, 0]
-    elif row["red_score"] < row["blue_score"]:
-        ranks = [0, 1]
-    else:
-        ranks = [0, 0]
+        if row["red_score"] > row["blue_score"]:
+            ranks = [1, 0]
+        elif row["red_score"] < row["blue_score"]:
+            ranks = [0, 1]
+        else:
+            ranks = [0, 0]
 
-    posterior_ratings = {}
-    for rating in env.rate(match_alliances, ranks=ranks):
-        posterior_ratings.update(rating)
+        posterior_ratings = {}
+        for rating in env.rate(match_alliances, ranks=ranks):
+            posterior_ratings.update(rating)
 
-    #print(posterior_ratings)
+        #print(posterior_ratings)
 
-    data_to_insert = []
-    for team, rating in posterior_ratings.items():
-        data_to_insert.append({"key": row["key"], "year": row["year"], "team": team, "mu": rating.mu, "sigma": rating.sigma})
-        ratings[team] = rating
+        data_to_insert = []
+        for team, rating in posterior_ratings.items():
+            data_to_insert.append({"key": row["key"], "year": row["year"], "team": team, "mu": rating.mu, "sigma": rating.sigma})
+            ratings[team] = rating
 
-    #print(data_to_insert)
-    df = pd.DataFrame(data_to_insert)
-    df.to_sql("trueskill_values", conn, if_exists="append", index=False)
+        #print(data_to_insert)
+        df = pd.DataFrame(data_to_insert)
+        df.to_sql("trueskill_values", conn, if_exists="append", index=False)
