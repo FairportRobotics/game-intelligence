@@ -63,9 +63,9 @@ for row in tqdm(rows, desc="Processing matches"):
         blue_alliance = dict(zip(blue_teams, blue_ratings))
         match_alliances = [red_alliance, blue_alliance]
 
-        if row["red_score"] > row["blue_score"]:
+        if row["red_score"] < row["blue_score"]:
             ranks = [1, 0]
-        elif row["red_score"] < row["blue_score"]:
+        elif row["red_score"] > row["blue_score"]:
             ranks = [0, 1]
         else:
             ranks = [0, 0]
