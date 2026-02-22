@@ -92,12 +92,12 @@ param_dist = {
     "model__lgbm__n_estimators": [100, 200],
     "model__lgbm__num_leaves": [31, 63],
     # MLP
-    "model__mlp__hidden_layer_sizes": [(100,), (100, 50)],
-    "model__mlp__alpha": [0.0001, 0.001],
+    "model__mlp__mlpclassifier__hidden_layer_sizes": [(100,), (100, 50)],
+    "model__mlp__mlpclassifier__alpha": [0.0001, 0.001],
     # KNN
-    "model__knn__n_neighbors": [3, 5, 7],
+    "model__knn__kneighborsclassifier__n_neighbors": [3, 5, 7],
     # SGD
-    "model__sgd__alpha": [0.0001, 0.001],
+    "model__sgd__sgdclassifier__alpha": [0.0001, 0.001],
     # Meta-model
     "model__final_estimator__C": [0.1, 1.0, 10.0],
 }
