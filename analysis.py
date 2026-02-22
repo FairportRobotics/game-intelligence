@@ -1,10 +1,12 @@
 import sqlite3
 
+
 def dict_factory(cursor, row):
     d = {}
     for idx, col in enumerate(cursor.description):
         d[col[0]] = row[idx]
     return d
+
 
 conn = sqlite3.connect("trueskill.db")
 conn.row_factory = dict_factory
@@ -94,7 +96,7 @@ ORDER BY event_key, level, team
 cursor.execute(sql)
 conn.commit()
 
-sql = '''
+sql = """
 SELECT level, AVG(MU) AS mu, AVG(sigma) AS sigma
 FROM (
 SELECT mu, sigma, 
@@ -110,9 +112,9 @@ ON a.team = b.team AND a.event_key = b.event_key
 ) 
 ) 
 GROUP BY level
-'''
+"""
 
-sql = '''
+sql = """
 SELECT level, mu, sigma, 
 CASE WHEN level IS NULL 
 THEN "Other" 
@@ -124,15 +126,16 @@ FROM last_qm_trueskill a
 LEFT JOIN qf_roles b
 ON a.team = b.team AND a.event_key = b.event_key
 ) 
-'''
+"""
 
 results = cursor.execute(sql).fetchall()
-#for result in results:
+# for result in results:
 #    print(result)
 
 import csv
+
 # Open the CSV file in write mode
-with open("full_data.csv", "w", newline='') as csvfile:
+with open("full_data.csv", "w", newline="") as csvfile:
     # Create a DictWriter object
     writer = csv.DictWriter(csvfile, fieldnames=["level", "mu", "sigma"])
 
