@@ -1,6 +1,4 @@
 import numpy as np
-from imblearn.pipeline import Pipeline
-from imblearn.over_sampling import SMOTE
 from sklearn.ensemble import (
     RandomForestClassifier,
     GradientBoostingClassifier,
@@ -15,17 +13,15 @@ from sklearn.model_selection import (
     RandomizedSearchCV,
     StratifiedKFold,
 )
-from sklearn.calibration import CalibratedClassifierCV
 from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.compose import ColumnTransformer
 from sklearn.metrics import accuracy_score, classification_report
 from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
 import pandas as pd
-import time
+import pickle
 import joblib
-
-start_time = time.perf_counter()
 
 # Load dataset
 data = pd.read_csv("full_data.csv")
@@ -45,20 +41,9 @@ X_train, X_test, y_train, y_test = train_test_split(
 # Base learners
 estimators = [
     # Tree-based models (no scaling needed)
-    (
-        "rf",
-        CalibratedClassifierCV(
-            RandomForestClassifier(class_weight="balanced", random_state=42), cv=3
-        ),
-    ),
-    ("gb", GradientBoostingClassifier(n_estimators=100, random_state=42)),
-    (
-        "lgbm",
-        LGBMClassifier(
-            objective="multiclass", class_weight="balanced", random_state=42
-        ),
-    ),
-    ("xgb", XGBClassifier(objective="multi:softprob", num_class=3, random_state=42)),
+    ("rf", RandomForestClassifier(n_estimators=100, random_state=42)),
+    ("lgbm", LGBMClassifier(n_estimators=100, random_state=42)),
+    ("xgb", XGBClassifier(n_estimators=100, eval_metric="logloss", random_state=42)),
     # Probabilistic model
     ("gnb", GaussianNB()),
     # Models that benefit from scaling
@@ -69,20 +54,10 @@ estimators = [
             MLPClassifier(hidden_layer_sizes=(100,), max_iter=1000, random_state=42),
         ),
     ),
-    ("knn", make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=5))),
-    (
-        "sgd",
-        make_pipeline(
-            StandardScaler(),
-            SGDClassifier(
-                loss="log_loss", max_iter=1000, random_state=42, class_weight="balanced"
-            ),
-        ),
-    ),
 ]
 
 # Meta-learner
-meta_model = LogisticRegression(max_iter=1000, class_weight="balanced")
+meta_model = LogisticRegression(max_iter=1000)
 
 stacking_clf = StackingClassifier(
     estimators=estimators,
@@ -92,15 +67,12 @@ stacking_clf = StackingClassifier(
     n_jobs=-1,
 )
 
-pipeline = Pipeline([("smote", SMOTE()), ("model", stacking_clf)])
+pipeline = Pipeline(steps=[("model", stacking_clf)])
 
 param_dist = {
     # Random Forest
-    "model__rf__estimator__n_estimators": [100, 200, 300],
-    "model__rf__estimator__max_depth": [None, 5, 10],
-    # Gradient Boosting
-    "model__gb__n_estimators": [100, 200],
-    "model__gb__learning_rate": [0.01, 0.1],
+    "model__rf__n_estimators": [100, 200, 300],
+    "model__rf__max_depth": [None, 5, 10],
     # XGBoost
     "model__xgb__n_estimators": [100, 200],
     "model__xgb__max_depth": [3, 5, 7],
@@ -110,20 +82,15 @@ param_dist = {
     # MLP
     "model__mlp__mlpclassifier__hidden_layer_sizes": [(100,), (100, 50)],
     "model__mlp__mlpclassifier__alpha": [0.0001, 0.001],
-    # KNN
-    "model__knn__kneighborsclassifier__n_neighbors": [3, 5, 7],
-    # SGD
-    "model__sgd__sgdclassifier__alpha": [0.0001, 0.001],
     # Meta-model
     "model__final_estimator__C": [0.1, 1.0, 10.0],
 }
 
-# Stacking classifier with hyperparameter tuning
 random_search = RandomizedSearchCV(
     pipeline,
     param_distributions=param_dist,
-    n_iter=30,  # adjust for compute budget
-    scoring="f1_macro",
+    n_iter=5,  # adjust for compute budget
+    scoring="accuracy",
     cv=3,
     verbose=2,
     random_state=42,
@@ -134,11 +101,6 @@ random_search.fit(X_train, y_train)
 model = random_search.best_estimator_
 
 joblib.dump(model, "models/ensemble_3_class.pkl")
-
-end_time = time.perf_counter()
-
-elapsed_time = end_time - start_time
-print(f"Execution time: {elapsed_time:.4f} seconds")
 
 # Predict
 y_pred = model.predict(X_test)
