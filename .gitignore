@@ -6,3 +6,5 @@ the-blue-alliance-data
 raw_data
 models
 *.db
+trueskill.db
+truskill.db-journal
