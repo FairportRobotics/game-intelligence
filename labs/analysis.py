@@ -13,6 +13,16 @@ conn.row_factory = dict_factory
 cursor = conn.cursor()
 
 sql = """
+CREATE VIEW IF NOT EXISTS latest_trueskill AS
+SELECT * FROM (
+SELECT a.id, a.team, a.mu, a.sigma FROM 
+(SELECT MAX(id) as id, team FROM trueskill_values GROUP BY team) b
+INNER JOIN trueskill_values a
+ON a.id = b.id AND a.team = b.team
+)
+"""
+
+sql = """
 CREATE VIEW IF NOT EXISTS last_qm_trueskill AS
 SELECT a.id, a.team, a.event_key, b.mu, b.sigma
 FROM
