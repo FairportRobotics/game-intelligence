@@ -1,7 +1,8 @@
 import sqlite3
+
+import pandas as pd
 import trueskill
 from tqdm import tqdm
-import pandas as pd
 
 
 def dict_factory(cursor, row):

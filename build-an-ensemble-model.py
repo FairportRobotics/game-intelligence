@@ -1,27 +1,22 @@
-import numpy as np
+import joblib
+import pandas as pd
+from lightgbm import LGBMClassifier
 from sklearn.ensemble import (
     RandomForestClassifier,
-    GradientBoostingClassifier,
     StackingClassifier,
+)
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import (
+    RandomizedSearchCV,
+    StratifiedKFold,
+    train_test_split,
 )
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neural_network import MLPClassifier
-from sklearn.linear_model import LogisticRegression, SGDClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import (
-    train_test_split,
-    RandomizedSearchCV,
-    StratifiedKFold,
-)
-from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline, make_pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.metrics import accuracy_score, classification_report
-from lightgbm import LGBMClassifier
+from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
-import pandas as pd
-import pickle
-import joblib
 
 # Load dataset
 data = pd.read_csv("full_data.csv")

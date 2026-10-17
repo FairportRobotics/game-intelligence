@@ -1,8 +1,9 @@
-from dotenv import load_dotenv, find_dotenv
-import os
-import requests
-from tqdm import tqdm
 import json
+import os
+
+import requests
+from dotenv import find_dotenv, load_dotenv
+from tqdm import tqdm
 
 # Key settings
 load_dotenv(find_dotenv())

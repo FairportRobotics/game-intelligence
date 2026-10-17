@@ -1,6 +1,7 @@
-from glob import glob
-import sqlite3
 import json
+import sqlite3
+from glob import glob
+
 import pandas as pd
 
 conn = sqlite3.connect("trueskill.db")

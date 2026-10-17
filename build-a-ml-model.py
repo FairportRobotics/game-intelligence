@@ -1,15 +1,16 @@
+import pickle
+
+import lightgbm as lgbm
+import numpy as np
+import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neural_network import MLPClassifier
-from sklearn.svm import SVC
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
-from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
-import pandas as pd
-import numpy as np
-import lightgbm as lgbm
-import pickle
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
 
 model_type = "nb"  # Change this to "rf", "nb", "mlp", or "svm" as needed
 
