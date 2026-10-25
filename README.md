@@ -9,8 +9,8 @@ scouting data, and ratings we calculate (Elo, TrueSkill, OPR).
 ## Quick start (about 10 minutes)
 
 ```bash
-git clone <our repo url>
-cd scouting-hub
+git clone https://github.com/FairportRobotics/game-intelligence
+cd game-intelligence
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
