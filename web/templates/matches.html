@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+{# Match list. TODO (Beginner): highlight our matches; show red/blue teams and scores. #}
+<h1>Matches</h1>
+{% if matches %}
+<div class="scroll-x">
+<table>
+  <thead><tr><th>Match</th><th>Red</th><th>Blue</th><th>Score</th></tr></thead>
+  <tbody>
+  {% for m in matches %}
+    <tr>
+      <td>{{ m.comp_level }}{{ m.match_number }}</td>
+      <td>{{ m.red1 }} {{ m.red2 }} {{ m.red3 }}</td>
+      <td>{{ m.blue1 }} {{ m.blue2 }} {{ m.blue3 }}</td>
+      <td>{% if m.red_score is not none %}{{ m.red_score }} - {{ m.blue_score }}{% else %}-{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p>No matches loaded yet. Import the schedule on the <a href="{{ url_for('admin.schedule_import') }}">Admin</a> page.</p>
+{% endif %}
+{% endblock %}

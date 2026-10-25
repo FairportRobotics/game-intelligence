@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+{# Passcode page. Handled by web/auth.py #}
+<h1>Enter the event passcode</h1>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="post">
+  <input type="password" name="passcode" placeholder="Passcode" autofocus>
+  <button type="submit">Enter</button>
+</form>
+{% endblock %}

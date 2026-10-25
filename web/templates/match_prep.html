@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+{#
+  Match prep - the most important page. The drive team reads it in 60 seconds.
+  TODO (Intermediate): show our next match, 3 partners, 3 opponents, key stats,
+  strengths/weaknesses, and a strategy note. Use BIG text.
+
+  Auto-refresh idea (HTMX): wrap the content in a div with
+     hx-get="{{ url_for('matches.match_prep') }}" hx-trigger="every {{ refresh_seconds }}s" hx-select="#prep" hx-target="#prep" hx-swap="outerHTML"
+#}
+<h1>Match prep</h1>
+<div id="prep"><p>TODO: build this page.</p></div>
+{% endblock %}
