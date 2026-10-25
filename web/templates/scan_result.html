@@ -1,0 +1,2 @@
+{# One line shown after each scan (returned by POST /scan). Green = saved, red = problem. #}
+<li class="{{ 'ok' if ok else 'error' }}">{{ '✔' if ok else '✖' }} {{ message }}</li>

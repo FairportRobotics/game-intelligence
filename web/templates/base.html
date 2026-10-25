@@ -1,0 +1,46 @@
+<!doctype html>
+{#
+  base.html - The layout every page shares (menu, freshness banner, styles).
+  Every other template starts with:  {% extends "base.html" %}
+  and fills in {% block content %}.
+
+  NOTE: all CSS/JS is loaded from web/static/ (NO CDN links) so pages work with
+  no internet. See web/static/vendor/README.md for what to download there.
+#}
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Scouting Hub{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/pico.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='vendor/htmx.min.js') }}" defer></script>
+</head>
+<body>
+  <nav class="container-fluid">
+    <ul><li><strong>Scouting Hub</strong></li></ul>
+    <ul>
+      <li><a href="{{ url_for('teams.team_list') }}">Teams</a></li>
+      <li><a href="{{ url_for('matches.match_list') }}">Matches</a></li>
+      <li><a href="{{ url_for('matches.match_prep') }}">Match prep</a></li>
+      <li><a href="{{ url_for('matches.rankings') }}">Rankings</a></li>
+      <li><a href="{{ url_for('picklist.picklist') }}">Pick list</a></li>
+      <li><a href="{{ url_for('scan.scan_page') }}">Scan</a></li>
+      <li><a href="{{ url_for('admin.admin_home') }}">Admin</a></li>
+    </ul>
+  </nav>
+
+  {# Data freshness banner: when was our data last updated, and from where? #}
+  <div class="freshness container-fluid">
+    {% if freshness.as_of %}
+      Match data as of {{ freshness.as_of }}{% if freshness.source %} ({{ freshness.source }}){% endif %}
+    {% else %}
+      No match data loaded yet.
+    {% endif %}
+  </div>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

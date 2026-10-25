@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+{# Team list. TODO (Beginner): add metric columns (Elo, TrueSkill, EPA, OPR) and make headers sortable. #}
+<h1>Teams at {{ event_key }}</h1>
+{% if teams %}
+<div class="scroll-x">
+<table>
+  <thead><tr><th>#</th><th>Name</th><th>City</th></tr></thead>
+  <tbody>
+  {% for t in teams %}
+    <tr>
+      <td><a href="{{ url_for('teams.team_profile', team_number=t.team_number) }}">{{ t.team_number }}</a></td>
+      <td>{{ t.name }}</td>
+      <td>{{ t.city }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p>No teams loaded yet. Run <code>python -m prefetch.prefetch_event</code> or <code>python seed/load_past_event.py</code>.</p>
+{% endif %}
+{% endblock %}

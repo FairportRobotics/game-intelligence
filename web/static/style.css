@@ -1,0 +1,9 @@
+/* style.css - Our own small tweaks. Put Scouting Hub styles here.
+   TODO (Beginner): make the tables easier to read on a phone, and make the
+   match prep page text BIG. */
+
+.freshness { font-size: 0.85rem; padding: 0.25rem 1rem; background: #eef; }
+.scroll-x { overflow-x: auto; }      /* wide tables scroll sideways instead of breaking the page */
+li.ok { color: #1a7f37; }            /* green scan result */
+li.error, p.error { color: #b42318; } /* red scan result */
+textarea { font-size: 1.1rem; }

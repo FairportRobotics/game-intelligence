@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+{# Schedule import. Format: match_number,red1,red2,red3,blue1,blue2,blue3 (see seed/schedule_example.csv) #}
+<h1>Import match schedule</h1>
+<form method="post" enctype="multipart/form-data">
+  <input type="file" name="schedule_csv" accept=".csv">
+  <button type="submit">Import</button>
+</form>
+<p>TODO (Intermediate): show how many matches were imported, and any rows with problems.</p>
+{% endblock %}

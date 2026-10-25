@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+{# Admin menu. TODO (Beginner): add buttons for Snapshot export and Database backup (POST). #}
+<h1>Admin</h1>
+<ul>
+  <li><a href="{{ url_for('admin.schedule_import') }}">Import match schedule (CSV)</a></li>
+  <li><a href="{{ url_for('admin.manual_results') }}">Type in match results</a></li>
+  <li><a href="{{ url_for('scan.coverage') }}">Scouting coverage</a></li>
+  <li><a href="{{ url_for('scan.quality') }}">Data quality</a></li>
+</ul>
+{% endblock %}

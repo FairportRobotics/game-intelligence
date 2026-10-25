@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+{# Home page. TODO (Beginner): show our next match and a "who to look at" summary here. #}
+<h1>Scouting Hub</h1>
+<p>Event: <strong>{{ event_key }}</strong> &middot; Our team: <strong>{{ our_team }}</strong></p>
+<ul>
+  <li><a href="{{ url_for('matches.match_prep') }}">Match prep for our next match</a></li>
+  <li><a href="{{ url_for('teams.team_list') }}">All teams</a></li>
+  <li><a href="{{ url_for('picklist.picklist') }}">Pick list</a></li>
+</ul>
+{% endblock %}
