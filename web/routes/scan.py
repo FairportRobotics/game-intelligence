@@ -38,7 +38,9 @@ def scan_submit():
     raw = request.form.get("payload", "").strip()
     # TODO (Intermediate): call scanning.importer.import_scan(raw) inside try/except
     # ValueError and return the message. Use scan_result.html for the response.
-    return render_template("scan_result.html", ok=False, message="TODO: importer not connected yet")
+    return render_template(
+        "scan_result.html", ok=False, message="TODO: importer not connected yet"
+    )
 
 
 @bp.route("/scan/coverage")

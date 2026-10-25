@@ -50,7 +50,7 @@ def create_app() -> Flask:
     def inject_globals():
         """Values available in EVERY template."""
         return {
-            "freshness": db.data_freshness(),   # for the "data last updated" banner
+            "freshness": db.data_freshness(),  # for the "data last updated" banner
             "our_team": config.OUR_TEAM,
             "event_key": config.EVENT_KEY,
             "refresh_seconds": config.PAGE_REFRESH_SECONDS,

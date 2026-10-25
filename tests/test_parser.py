@@ -15,6 +15,8 @@ TODO (Intermediate): write real tests, for example:
 import pytest
 
 
-@pytest.mark.skip(reason="TODO: add real sample scans to tests/samples/ and write tests")
+@pytest.mark.skip(
+    reason="TODO: add real sample scans to tests/samples/ and write tests"
+)
 def test_parse_valid_match_scan():
     raise NotImplementedError

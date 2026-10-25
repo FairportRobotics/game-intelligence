@@ -21,8 +21,18 @@ def make_client(tmp_path, monkeypatch):
 
 def test_pages_load(tmp_path, monkeypatch):
     client = make_client(tmp_path, monkeypatch)
-    for url in ["/", "/teams", "/matches", "/matches/prep", "/rankings",
-                "/scan", "/picklist", "/admin", "/admin/schedule", "/admin/results"]:
+    for url in [
+        "/",
+        "/teams",
+        "/matches",
+        "/matches/prep",
+        "/rankings",
+        "/scan",
+        "/picklist",
+        "/admin",
+        "/admin/schedule",
+        "/admin/results",
+    ]:
         assert client.get(url).status_code == 200, url
 
 
@@ -31,4 +41,4 @@ def test_login_required(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "DB_PATH", tmp_path / "test.db")
     db.init_db()
     client = create_app().test_client()
-    assert client.get("/teams").status_code == 302   # redirected to /login
+    assert client.get("/teams").status_code == 302  # redirected to /login
