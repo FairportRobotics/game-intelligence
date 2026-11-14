@@ -9,7 +9,7 @@ WHAT SHOULD BE IN THIS FILE
       Checks to include:
         1. Required fields are present and the right type.
         2. The event_key matches the event we are at (config.EVENT_KEY).
-        3. The team is actually IN that match, according to the `matches` table
+        3. The team is actually IN that match, according to the `tba_matches` table
            (this catches mistyped team numbers).
         4. The match exists in the schedule. (If the schedule is not loaded yet,
            return a warning instead of an error so scanning is not blocked.)

@@ -11,7 +11,7 @@ PURPOSE
 WHAT SHOULD BE IN THIS FILE
     - poll_once(): one pass of:
         1. fetch matches + rankings (tba_client; fall back to first_client)
-        2. UPSERT into `matches` and `rankings` with source='tba' and fetched_at=now
+        2. UPSERT into `tba_matches` and `tba_rankings` with source='tba' and fetched_at=now
            (official data OVERWRITES rows whose source is 'manual' or 'scouted')
         3. call metrics.run_all.run() if anything changed
     - main(): loop forever (or use APScheduler) and call poll_once().

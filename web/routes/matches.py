@@ -31,7 +31,7 @@ bp = Blueprint("matches", __name__)
 def match_list():
     # TODO (Beginner): highlight rows that include config.OUR_TEAM.
     rows = db.query_all(
-        "SELECT * FROM matches WHERE event_key = ? ORDER BY comp_level, match_number",
+        "SELECT * FROM tba_matches WHERE event_key = ? ORDER BY comp_level, match_number",
         (config.EVENT_KEY,),
     )
     return render_template("matches.html", matches=rows)
@@ -46,5 +46,5 @@ def match_prep():
 
 @bp.route("/rankings")
 def rankings():
-    # TODO (Beginner): query `rankings` joined with `teams`, ordered by rank.
+    # TODO (Beginner): query `tba_rankings` joined with `tba_teams`, ordered by rank.
     return render_template("rankings.html", rankings=[])

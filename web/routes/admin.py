@@ -36,11 +36,11 @@ def admin_home():
 
 @bp.route("/admin/schedule", methods=["GET", "POST"])
 def schedule_import():
-    # TODO (Intermediate): on POST, read the uploaded CSV, validate each row, and upsert into `matches`.
+    # TODO (Intermediate): on POST, read the uploaded CSV, validate each row, and upsert into `tba_matches`.
     return render_template("admin_schedule.html")
 
 
 @bp.route("/admin/results", methods=["GET", "POST"])
 def manual_results():
-    # TODO (Intermediate): on POST, save red/blue scores to `matches` with source='manual'.
+    # TODO (Intermediate): on POST, save red/blue scores to `tba_matches` with source='manual'.
     return render_template("admin_results.html")

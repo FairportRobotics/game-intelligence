@@ -40,7 +40,7 @@ PICKLIST_AUTOSAVE_DIR = DATA_DIR / "picklist_autosave"  # timestamped JSON pick 
 
 # --- Event settings --------------------------------------------------------
 EVENT_KEY = os.environ.get("EVENT_KEY", "2026nyro")   # TODO: change for each event
-OUR_TEAM = int(os.environ.get("OUR_TEAM", "0"))        # TODO: our team number
+OUR_TEAM = int(os.environ.get("OUR_TEAM", "578"))        # TODO: our team number
 
 # --- Secrets (come from .env) ----------------------------------------------
 TBA_API_KEY = os.environ.get("TBA_API_KEY", "")

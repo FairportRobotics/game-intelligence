@@ -43,8 +43,8 @@ def team_list():
     rows = db.query_all(
         """
         SELECT t.team_number, t.name, t.city
-        FROM event_teams et
-        JOIN teams t ON t.team_number = et.team_number
+        FROM tba_event_teams et
+        JOIN tba_teams t ON t.team_number = et.team_number
         WHERE et.event_key = ?
         ORDER BY t.team_number
         """,
@@ -56,5 +56,5 @@ def team_list():
 @bp.route("/teams/<int:team_number>")
 def team_profile(team_number: int):
     # TODO (Intermediate): load metrics, pit scouting, and match scouting for this team.
-    team = db.query_one("SELECT * FROM teams WHERE team_number = ?", (team_number,))
+    team = db.query_one("SELECT * FROM tba_teams WHERE team_number = ?", (team_number,))
     return render_template("team_profile.html", team=team, team_number=team_number)

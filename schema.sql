@@ -11,7 +11,7 @@
 
 -- ===== Public data =========================================================
 
-CREATE TABLE IF NOT EXISTS teams (
+CREATE TABLE IF NOT EXISTS tba_teams (
     team_number  INTEGER PRIMARY KEY,
     name         TEXT,
     city         TEXT,
@@ -19,22 +19,22 @@ CREATE TABLE IF NOT EXISTS teams (
     rookie_year  INTEGER
 );
 
-CREATE TABLE IF NOT EXISTS events (
+CREATE TABLE IF NOT EXISTS tba_events (
     event_key   TEXT PRIMARY KEY,          -- e.g. 2026nyro
     name        TEXT,
     start_date  TEXT,
     end_date    TEXT
 );
 
-CREATE TABLE IF NOT EXISTS event_teams (
-    event_key    TEXT NOT NULL REFERENCES events(event_key),
-    team_number  INTEGER NOT NULL REFERENCES teams(team_number),
+CREATE TABLE IF NOT EXISTS tba_event_teams (
+    event_key    TEXT NOT NULL REFERENCES tba_events(event_key),
+    team_number  INTEGER NOT NULL REFERENCES tba_teams(team_number),
     PRIMARY KEY (event_key, team_number)
 );
 
-CREATE TABLE IF NOT EXISTS matches (
+CREATE TABLE IF NOT EXISTS tba_matches (
     match_key     TEXT PRIMARY KEY,        -- e.g. 2026nyro_qm12
-    event_key     TEXT NOT NULL REFERENCES events(event_key),
+    event_key     TEXT NOT NULL REFERENCES tba_events(event_key),
     comp_level    TEXT,                    -- qm, qf, sf, f
     set_number    INTEGER,
     match_number  INTEGER,
@@ -44,26 +44,26 @@ CREATE TABLE IF NOT EXISTS matches (
     blue_score    INTEGER,
     time          TEXT,
     source        TEXT,                    -- tba, first, manual, scouted
-    fetched_at    TEXT
+    fetched_at    INTEGER
 );
 
-CREATE TABLE IF NOT EXISTS rankings (
-    event_key       TEXT NOT NULL REFERENCES events(event_key),
-    team_number     INTEGER NOT NULL REFERENCES teams(team_number),
+CREATE TABLE IF NOT EXISTS tba_rankings (
+    event_key       TEXT NOT NULL REFERENCES tba_events(event_key),
+    team_number     INTEGER NOT NULL REFERENCES tba_teams(team_number),
     rank            INTEGER,
     record          TEXT,                  -- e.g. 5-2-0
     ranking_points  REAL,
     source          TEXT,
-    fetched_at      TEXT,
+    fetched_at      INTEGER,
     PRIMARY KEY (event_key, team_number)
 );
 
 -- Keeps the last good response from each API URL (and its ETag).
-CREATE TABLE IF NOT EXISTS raw_api_cache (
+CREATE TABLE IF NOT EXISTS raw_tba_api_data (
     url            TEXT PRIMARY KEY,
     etag           TEXT,
     response_json  TEXT,
-    fetched_at     TEXT
+    fetched_at     INTEGER
 );
 
 -- ===== Our scouting data ===================================================
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS team_metrics (
     metric_name  TEXT NOT NULL,            -- opr, elo, trueskill, epa_pre_event, epa_live, ...
     value        REAL,
     source       TEXT,
-    updated_at   TEXT,
+    updated_at   INTEGER,
     PRIMARY KEY (team_number, event_key, metric_name)
 );
 

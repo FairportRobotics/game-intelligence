@@ -21,6 +21,12 @@ WHAT SHOULD BE IN THIS FILE
 LEVEL: Beginner to Intermediate.
 """
 
+import sys
+from pathlib import Path
+
+# Direct execution adds seed/ to sys.path, not the project root.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import db
 
 

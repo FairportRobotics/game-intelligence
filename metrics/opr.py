@@ -16,7 +16,7 @@ THE IDEA
     numpy.linalg.lstsq does the work. DPR/CCWM are variations of the same idea.
 
 WHAT SHOULD BE IN THIS FILE
-    - calculate(event_key): build A and b from the `matches` table (played matches
+    - calculate(event_key): build A and b from the `tba_matches` table (played matches
       only), solve, and save results to `team_metrics` as metric_name='opr'
       (and optionally 'dpr', 'ccwm') with source set to where the scores came from.
 

@@ -176,12 +176,12 @@ The database is a single SQLite file (for example, `data/scouting.db`). Here are
 
 | Table | Key columns | Notes |
 | --- | --- | --- |
-| `teams` | team\_number, name, city, state, rookie\_year |  |
-| `events` | event\_key, name, start\_date, end\_date | Keys look like `2026nyro` |
-| `event_teams` | event\_key, team\_number | Which teams attend which event |
-| `matches` | match\_key, event\_key, comp\_level, match\_number, red1-3, blue1-3, red\_score, blue\_score, time | Unplayed matches have no score yet |
-| `rankings` | event\_key, team\_number, rank, record, ranking\_points | Updated during the event |
-| `raw_api_cache` | url, etag, response\_json, fetched\_at | Saves what TBA sent us |
+| `tba_teams` | team\_number, name, city, state, rookie\_year |  |
+| `tba_events` | event\_key, name, start\_date, end\_date | Keys look like `2026nyro` |
+| `tba_event_teams` | event\_key, team\_number | Which teams attend which event |
+| `tba_matches` | match\_key, event\_key, comp\_level, match\_number, red1-3, blue1-3, red\_score, blue\_score, time | Unplayed matches have no score yet |
+| `tba_rankings` | event\_key, team\_number, rank, record, ranking\_points | Updated during the event |
+| `raw_tba_api_data` | url, etag, response\_json, fetched\_at | Saves what TBA sent us |
 
 ### Our scouting tables
 
@@ -204,7 +204,7 @@ The database is a single SQLite file (for example, `data/scouting.db`). Here are
 
 ### Where did this number come from? (`source` and `fetched_at`)
 
-Tables that hold outside or typed-in data (`matches`, `rankings`, `team_metrics`) carry two extra columns so we always know how trustworthy a number is:
+Tables that hold outside or typed-in data (`tba_matches`, `tba_rankings`, `team_metrics`) carry two extra columns so we always know how trustworthy a number is:
 
 | Column | Values | Why |
 | --- | --- | --- |

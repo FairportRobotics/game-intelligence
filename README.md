@@ -47,7 +47,7 @@ Run the tests with `pytest`. Keep them passing.
 1. **The web app never calls TBA, Statbotics, or FIRST.** Only `prefetch/` and `ingest/` do.
 2. **Everything must work with no internet.** No CDN links. Put libraries in `web/static/vendor/`.
 3. **Never commit `.env`** or any API key.
-4. **Save raw data first** (`raw_scans`, `raw_api_cache`).
+4. **Save raw data first** (`raw_scans`, `raw_tba_api_data`).
 5. **Always use `?` placeholders in SQL.** Never paste values into SQL strings.
 6. **Small pull requests.** One feature, one branch, one reviewer.
 
