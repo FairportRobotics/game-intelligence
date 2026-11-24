@@ -19,6 +19,12 @@ An official contest between Red and Blue alliances at an event.
 **Alliance**:
 A group of teams assigned to one side of a match.
 
+**Alliance captain**:
+The team listed first on a playoff alliance roster.
+
+**Alliance selection**:
+The post-qualification process in which teams form playoff alliances.
+
 **Autonomous**:
 The opening match period in which robot actions run without driver control.
 
@@ -27,6 +33,15 @@ The closing portion of match play, with game-specific scoring activities.
 
 **Official result**:
 A match result published by FIRST.
+
+**Pick list**:
+A rank-ordered list of teams considered for addition to a playoff alliance.
+
+**Pick position**:
+A team's order of addition to a playoff alliance after its captain, such as first pick or second pick.
+
+**Not selected**:
+A team that is not on a final playoff alliance roster; this does not establish whether the team received or declined an invitation.
 
 **Teleop**:
 The driver-controlled match period following Autonomous.
@@ -54,6 +69,9 @@ _Avoid_: OPC, Statbotics Elo
 
 **Match outcome probability**:
 The estimated probability that Red wins, the match ties, or Blue wins.
+
+**Selection-role probability**:
+The estimated probability that a team ends alliance selection as a captain, in a pick position, or not selected.
 
 ## Scouting
 

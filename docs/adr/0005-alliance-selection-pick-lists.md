@@ -1,0 +1,9 @@
+# Alliance selection pick lists
+
+Keep general team scoring contribution, pick-specific alliance value, and selection-role probabilities as separate views: the first estimates expected match scoring, the second estimates the change in playoff win probability from adding a candidate against plausible event opponents, and the third predicts observed final roster roles. Generate role probabilities from event-level outcomes respecting event rules and alliance sizes, using complete historical roster records only; TBA's ordered roster data does not provide a reliable offer/decline transcript, so “Not selected” means absent from a final alliance roster. The primary match predictor remains unchanged; phase ratings may enter the separate pick-list value model only if validation supports them.
+
+## Consequences
+
+- Update predictions after each finalized qualification match by simulating remaining match scores and ranking points, then applying the event's official ranking and tie-break rules to project final standings and alliance selection outcomes. Include Captain, First pick, Second pick, and Third pick where the event format permits it.
+- Freeze the pre-selection snapshot after qualifications. Preserve it for evaluation; if verified result corrections change its inputs before selection, save a versioned revision. Retain the snapshot's data cutoff and model/rule versions, then record final roster roles after selection.
+- Train role probabilities on complete same-season events first; use earlier seasons only when comparable and supported by validation. Compare chronological held-out-event log loss and calibration against a baseline derived from captain rules and historical pick-position rates by qualification rank and alliance format. Use ML only with sufficient data and demonstrated improvement; otherwise disclose low confidence or use the baseline.
