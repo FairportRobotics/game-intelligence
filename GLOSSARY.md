@@ -19,13 +19,25 @@ An official contest between Red and Blue alliances at an event.
 **Alliance**:
 A group of teams assigned to one side of a match.
 
+**Autonomous**:
+The opening match period in which robot actions run without driver control.
+
+**End Game**:
+The closing portion of match play, with game-specific scoring activities.
+
 **Official result**:
 A match result published by FIRST.
+
+**Teleop**:
+The driver-controlled match period following Autonomous.
 
 ## Ratings and outcomes
 
 **TrueSkill rating**:
 An estimate of a team's competitive skill that includes uncertainty about that estimate.
+
+**Phase rating**:
+A team's competitive-skill estimate for one match phase, inferred from the results of alliances it joined in that phase.
 
 **All-time rating**:
 A team's rating based on its match history across supported seasons.
