@@ -99,3 +99,20 @@ It assigns Captain and ordered pick roles; only a complete roster classifies
 event Teams absent from every alliance as `Not selected`. Incomplete roster
 data reports only known alliance membership and never implies an offer,
 decline, or non-selection.
+
+## Resumable ingestion runs
+
+`backend.historic_ingestion_runs.run_historic_ingestion` processes a selected
+list of Event/source pairs and stores its manifest and checkpoints in a
+separate SQLite database. Reuse the same `run_id` and checkpoint database to
+resume; completed Events are not fetched or ingested again. Retries of
+transient source failures are bounded by `max_attempts`. A failed run summary
+includes structured failure details with the Event, source, attempt count, and
+a sanitized reason; adapter exception messages are not retained.
+
+Adapters may return `SourceResult(unchanged=True)` for an unchanged or 304-style
+response. In that case the canonical ingestor is not called. `RunSummary`
+provides per-outcome counts and completed, skipped, and failed Event keys, plus
+a concise human-readable summary. The caller supplies adapter credentials at
+runtime; run manifests and checkpoints contain only Event and source
+identifiers, not credentials.
