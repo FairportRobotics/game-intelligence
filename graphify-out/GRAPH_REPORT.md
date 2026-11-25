@@ -1,113 +1,107 @@
-# Graph Report - game-intelligence  (2026-11-25)
+# Graph Report - impl-ticket5  (2026-11-25)
 
 ## Corpus Check
-- Corpus is ~46,692 words - fits in a single context window. You may not need a graph.
+- 22 files · ~48,290 words
+- Verdict: corpus is large enough that graph structure adds value.
+- Unclassified: 2 file(s) not represented in the graph (top: (none) 2)
 
 ## Summary
-- 104 nodes · 147 edges · 13 communities (10 shown, 3 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 6 edges (avg confidence: 0.87)
+- 189 nodes · 271 edges · 11 communities (7 shown, 4 thin omitted)
+- Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 17 edges (avg confidence: 0.92)
 - Token cost: 10,200 input · 5,200 output
+
+## Graph Freshness
+- Built from commit: `3855b331`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - Competition Domain and Selection
-- FIRST Events API and Sync
-- Engineering Standards and Agent Setup
-- Rating Models and History
-- Event Metadata Endpoints
-- Match Schedule and Scoring
-- Historic Ingestion Implementation
-- Architecture Decisions
-- Event Rankings and Advancement
-- API Authentication
+- FRC Events API
+- Engineering Standards
+- TrueSkill[¶](#trueskill "Permalink to this headline")
+- Changelog[¶](#changelog "Permalink to this headline")
+- historic_ingestion.py
+- frc-api-docs.firstinspires.org.md
 - Graphify Navigation Instructions
 - Project Overview
 
 ## God Nodes (most connected - your core abstractions)
 1. `FRC Events API` - 28 edges
 2. `Game Intelligence domain glossary` - 26 edges
-3. `GETScore Details` - 8 edges
-4. `Domain documentation guidance` - 7 edges
-5. `eventCode` - 6 edges
-6. `Engineering standards` - 6 edges
-7. `Phase rating update policy` - 6 edges
-8. `Alliance selection scoring and role model` - 6 edges
-9. `ingest_historic_event()` - 5 edges
-10. `GETTeam Avatar Listings` - 5 edges
+3. `ingest_historic_event()` - 17 edges
+4. `Changelog[¶](#changelog "Permalink to this headline")` - 15 edges
+5. `NormalizedHistoricBatch` - 11 edges
+6. `HistoricIngestionValidationError` - 9 edges
+7. `GETScore Details` - 9 edges
+8. `Webhooks` - 8 edges
+9. `Engineering Standards` - 8 edges
+10. `TrueSkill[¶](#trueskill "Permalink to this headline")` - 8 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `test_replaying_one_historic_event_is_unchanged()` --calls--> `ingest_historic_event()`  [EXTRACTED]
+- `Historic Event ingestion` --references--> `IngestionSummary`  [INFERRED]
+  docs/historic-ingestion.md → backend/historic_ingestion.py
+- `Historic Event ingestion` --references--> `HistoricIngestionValidationError`  [INFERRED]
+  docs/historic-ingestion.md → backend/historic_ingestion.py
+- `Historic Event ingestion` --references--> `ingest_historic_event()`  [INFERRED]
+  docs/historic-ingestion.md → backend/historic_ingestion.py
+- `test_changed_alliance_data_is_reported_as_an_update()` --uses--> `NormalizedHistoricBatch`  [INFERRED]
   tests/test_historic_ingestion.py → backend/historic_ingestion.py
-- `Repository agent instructions` --references--> `Domain documentation guidance`  [EXTRACTED]
-  AGENTS.md → docs/agents/domain.md
-- `Domain documentation guidance` --references--> `Game Intelligence domain glossary`  [EXTRACTED]
-  docs/agents/domain.md → GLOSSARY.md
-- `Alliance selection scoring and role model` --conceptually_related_to--> `Alliance selection`  [EXTRACTED]
-  docs/adr/0005-alliance-selection-pick-lists.md → GLOSSARY.md
-- `Phase rating update policy` --conceptually_related_to--> `Autonomous`  [EXTRACTED]
-  docs/adr/0004-phase-specific-ratings.md → GLOSSARY.md
+- `test_empty_match_identity_fails_with_a_validation_error()` --uses--> `NormalizedHistoricBatch`  [INFERRED]
+  tests/test_historic_ingestion.py → backend/historic_ingestion.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (13 total, 3 thin omitted)
+## Communities (11 total, 4 thin omitted)
 
 ### Community 0 - "Competition Domain and Selection"
-Cohesion: 0.11
-Nodes (23): Phase rating update policy, Alliance selection scoring and role model, Game Intelligence domain glossary, Alliance, Alliance captain, Alliance selection, Autonomous, End Game (+15 more)
+Cohesion: 0.07
+Nodes (33): Writable event database handoff, Match result precedence and provenance, Continuous all-time and season-reset rating streams, Phase rating update policy, Alliance selection scoring and role model, Domain documentation guidance, TrueSkill Gaussian rating model, Game Intelligence domain glossary (+25 more)
 
-### Community 1 - "FIRST Events API and Sync"
-Cohesion: 0.24
-Nodes (12): Accept Header, GETAPI Index, FIRST/FMS event data system, Field Management System, FMS-OnlyModifiedSince Header, FRC Events API, HTTP 200 OK, HTTP 304 Not Modified (+4 more)
+### Community 1 - "FRC Events API"
+Cohesion: 0.10
+Nodes (40): Accept Header, Alliance Size and Role Enums, Authorization Header, AuthorizationKey, Team Avatar Data, Award Data, Basic Authentication, District and Tournament Type Enums (+32 more)
 
-### Community 2 - "Engineering Standards and Agent Setup"
-Cohesion: 0.20
-Nodes (10): Repository agent instructions, GitHub issue tracker conventions, Canonical triage label mapping, Canonical issue triage roles, Engineering standards, Deep-module design, Pyrefly type checking, pytest test suite (+2 more)
+### Community 2 - "Engineering Standards"
+Cohesion: 0.08
+Nodes (22): Agent skills, Codebase graph, Domain docs, Engineering standards, Issue tracker, Triage labels, GitHub issue tracker conventions, Canonical triage label mapping (+14 more)
 
-### Community 3 - "Rating Models and History"
-Cohesion: 0.20
-Nodes (9): Continuous all-time and season-reset rating streams, TrueSkill 0.4.5 documentation, TrueSkill Gaussian rating model, TrueSkill partial-play weights, TrueSkill team rating updates, All-time rating, Elo rating, Season rating (+1 more)
+### Community 3 - "TrueSkill[¶](#trueskill "Permalink to this headline")"
+Cohesion: 0.09
+Nodes (22): API[¶](#api "Permalink to this headline"), Backends[¶](#backends "Permalink to this headline"), Default values[¶](#default-values "Permalink to this headline"), Draw probability helpers[¶](#draw-probability-helpers "Permalink to this headline"), Functions for the global environment[¶](#functions-for-the-global-environment "Permalink to this headline"), Further more[¶](#further-more "Permalink to this headline"), Head-to-head (1 vs. 1) match rule[¶](#head-to-head-1-vs-1-match-rule "Permalink to this headline"), Head-to-head shortcuts[¶](#head-to-head-shortcuts "Permalink to this headline") (+14 more)
 
-### Community 4 - "Event Metadata Endpoints"
-Cohesion: 0.31
-Nodes (9): Team Avatar Data, Award Data, GETEvent Awards, eventCode, HTTP 400 Invalid or Malformed Request, HTTP 404 Invalid Event, season, GETTeam Avatar Listings (+1 more)
+### Community 4 - "Changelog[¶](#changelog "Permalink to this headline")"
+Cohesion: 0.13
+Nodes (15): Changelog[¶](#changelog "Permalink to this headline"), Version 0.1.1[¶](#version-0-1-1 "Permalink to this headline"), Version 0.1.3[¶](#version-0-1-3 "Permalink to this headline"), Version 0.1.4[¶](#version-0-1-4 "Permalink to this headline"), Version 0.1[¶](#version-0-1 "Permalink to this headline"), Version 0.2.1[¶](#version-0-2-1 "Permalink to this headline"), Version 0.2[¶](#version-0-2 "Permalink to this headline"), Version 0.3.1[¶](#version-0-3-1 "Permalink to this headline") (+7 more)
 
-### Community 5 - "Match Schedule and Scoring"
-Cohesion: 0.33
-Nodes (9): GETEvent Schedule, HTTP 501 Request Did Not Match API Pattern, Match Alliance Data, matchNumber, start and end match range, Match Score Data, Event Schedule Data, GETScore Details (+1 more)
+### Community 6 - "historic_ingestion.py"
+Cohesion: 0.13
+Nodes (19): EventInput, HistoricIngestionValidationError, ingest_historic_event(), IngestionSummary, _initialize_database(), _json_data(), MatchInput, NormalizedHistoricBatch (+11 more)
 
-### Community 6 - "Historic Ingestion Implementation"
-Cohesion: 0.36
-Nodes (3): ingest_historic_event(), IngestionSummary, test_replaying_one_historic_event_is_unchanged()
-
-### Community 7 - "Architecture Decisions"
-Cohesion: 0.25
-Nodes (4): Writable event database handoff, Match result precedence and provenance, Domain documentation guidance, Official result
-
-### Community 8 - "Event Rankings and Advancement"
-Cohesion: 0.60
-Nodes (5): GETAlliance Selection Points, Alliance Size and Role Enums, District and Tournament Type Enums, District Ranking Data, GETQual Performance Points
-
-### Community 9 - "API Authentication"
-Cohesion: 0.50
-Nodes (4): Authorization Header, AuthorizationKey, Basic Authentication, HTTP 401 Unauthorized
+### Community 7 - "frc-api-docs.firstinspires.org.md"
+Cohesion: 0.22
+Nodes (8): Authorization, Documentation Notes, FRC Events, HTTP401 and Authorization, Last-Modified, FMS-OnlyModifiedSince, and If-Modified-Since Headers, Migration and Program Notes:, Overview, Response Codes
 
 ## Knowledge Gaps
-- **30 isolated node(s):** `GETAPI Index`, `AuthorizationKey`, `Accept Header`, `HTTP 200 OK`, `HTTP 500 Internal Server Error` (+25 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 35 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **29 isolated node(s):** `Canonical issue triage roles`, `Writable event database handoff`, `Alliance`, `Alliance captain`, `EPA` (+24 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 87 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Game Intelligence domain glossary` connect `Competition Domain and Selection` to `Rating Models and History`, `Architecture Decisions`?**
-  _High betweenness centrality (0.173) - this node is a cross-community bridge._
-- **Are the 2 inferred relationships involving `eventCode` (e.g. with `Team Avatar Data` and `HTTP 404 Invalid Event`) actually correct?**
-  _`eventCode` has 2 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `GETAPI Index`, `AuthorizationKey`, `Accept Header` to the rest of the system?**
-  _30 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `TrueSkill[¶](#trueskill "Permalink to this headline")` connect `TrueSkill[¶](#trueskill "Permalink to this headline")` to `Changelog[¶](#changelog "Permalink to this headline")`?**
+  _High betweenness centrality (0.146) - this node is a cross-community bridge._
+- **Are the 6 inferred relationships involving `NormalizedHistoricBatch` (e.g. with `test_changed_alliance_data_is_reported_as_an_update()` and `test_empty_match_identity_fails_with_a_validation_error()`) actually correct?**
+  _`NormalizedHistoricBatch` has 6 INFERRED edges - model-reasoned connections that need verification._
+- **What connects `Canonical issue triage roles`, `Writable event database handoff`, `Alliance` to the rest of the system?**
+  _29 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Competition Domain and Selection` be split into smaller, more focused modules?**
-  _Cohesion score 0.11462450592885376 - nodes in this community are weakly interconnected._
-- **Why does `Domain documentation guidance` connect `Architecture Decisions` to `Competition Domain and Selection`, `Engineering Standards and Agent Setup`, `Rating Models and History`?**
-  _High betweenness centrality (0.113) - this node is a cross-community bridge._
-- **Why does `FRC Events API` connect `FIRST Events API and Sync` to `Event Rankings and Advancement`, `API Authentication`, `Event Metadata Endpoints`, `Match Schedule and Scoring`?**
-  _High betweenness centrality (0.113) - this node is a cross-community bridge._
+  _Cohesion score 0.07254623044096728 - nodes in this community are weakly interconnected._
+- **Why does `Domain documentation guidance` connect `Competition Domain and Selection` to `Engineering Standards`?**
+  _High betweenness centrality (0.121) - this node is a cross-community bridge._
+- **Should `FRC Events API` be split into smaller, more focused modules?**
+  _Cohesion score 0.09743589743589744 - nodes in this community are weakly interconnected._
+- **Should `Engineering Standards` be split into smaller, more focused modules?**
+  _Cohesion score 0.08333333333333333 - nodes in this community are weakly interconnected._
