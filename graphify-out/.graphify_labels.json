@@ -1,1 +1,6 @@
-{"0": "Competition Domain and Selection", "1": "FIRST Events API and Sync", "2": "Engineering Standards and Agent Setup", "3": "Rating Models and History", "4": "Event Metadata Endpoints", "5": "Match Schedule and Scoring", "6": "Historic Ingestion Implementation", "7": "Architecture Decisions", "8": "Event Rankings and Advancement", "9": "API Authentication", "10": "Python Package Structure", "11": "Graphify Navigation Instructions", "12": "Project Overview"}
+{
+  "0": "Competition Domain and Selection",
+  "10": "Python Package Structure",
+  "11": "Graphify Navigation Instructions",
+  "12": "Project Overview"
+}
