@@ -33,12 +33,23 @@ class MatchInput(TypedDict):
     score_breakdown: NotRequired[dict[str, object]]
 
 
+class PlayoffAllianceInput(TypedDict):
+    number: int
+    teams: list[int]
+
+
+class PlayoffRostersInput(TypedDict):
+    complete: bool
+    alliances: list[PlayoffAllianceInput]
+
+
 class NormalizedHistoricBatch(TypedDict):
     season: SeasonInput
     event: EventInput
     teams: list[TeamInput]
     matches: list[MatchInput]
     source: MatchResultSource
+    playoff_rosters: NotRequired[PlayoffRostersInput]
 
 
 @dataclass(frozen=True)
@@ -50,6 +61,15 @@ class IngestionSummary:
     failed: int = 0
     replaced: int = 0
     affected_matches: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class PlayoffRosterResult:
+    team_number: int
+    role: str
+    alliance_number: int | None
+    source: str
+    complete: bool
 
 
 class HistoricIngestionValidationError(ValueError):
@@ -97,6 +117,13 @@ def _initialize_database(connection: sqlite3.Connection) -> None:
             position INTEGER NOT NULL,
             team_number INTEGER NOT NULL REFERENCES teams(number),
             PRIMARY KEY (match_key, alliance, position)
+        );
+        CREATE TABLE IF NOT EXISTS playoff_rosters (
+            event_key TEXT NOT NULL REFERENCES events(key) ON DELETE CASCADE,
+            source TEXT NOT NULL,
+            complete INTEGER NOT NULL CHECK (complete IN (0, 1)),
+            data TEXT NOT NULL,
+            PRIMARY KEY (event_key, source)
         );
         """
     )
@@ -190,6 +217,61 @@ def _validate_batch(batch: NormalizedHistoricBatch) -> None:
         team_numbers.add(number)
     if len(team_numbers) != len(teams):
         raise HistoricIngestionValidationError("team numbers must be unique")
+    playoff_rosters = batch.get("playoff_rosters")
+    if playoff_rosters is not None:
+        if (
+            not isinstance(playoff_rosters, dict)
+            or not isinstance(playoff_rosters.get("complete"), bool)
+            or not isinstance(playoff_rosters.get("alliances"), list)
+        ):
+            raise HistoricIngestionValidationError(
+                "playoff_rosters must contain a complete flag and alliances list"
+            )
+        alliance_numbers: set[int] = set()
+        roster_team_numbers: set[int] = set()
+        for alliance in playoff_rosters["alliances"]:
+            if not isinstance(alliance, dict):
+                raise HistoricIngestionValidationError(
+                    "each playoff alliance must be a mapping"
+                )
+            alliance_number = alliance.get("number")
+            alliance_teams = alliance.get("teams")
+            if (
+                not isinstance(alliance_number, int)
+                or isinstance(alliance_number, bool)
+                or alliance_number <= 0
+                or alliance_number in alliance_numbers
+            ):
+                raise HistoricIngestionValidationError(
+                    "playoff alliance numbers must be unique positive integers"
+                )
+            alliance_numbers.add(alliance_number)
+            if (
+                not isinstance(alliance_teams, list)
+                or not alliance_teams
+                or any(
+                    not isinstance(team_number, int)
+                    or isinstance(team_number, bool)
+                    or team_number not in team_numbers
+                    for team_number in alliance_teams
+                )
+            ):
+                raise HistoricIngestionValidationError(
+                    "playoff alliances must contain known Teams"
+                )
+            if len(set(alliance_teams)) != len(alliance_teams):
+                raise HistoricIngestionValidationError(
+                    "playoff alliances must not repeat a Team"
+                )
+            if roster_team_numbers.intersection(alliance_teams):
+                raise HistoricIngestionValidationError(
+                    "a Team must not appear on multiple playoff alliances"
+                )
+            roster_team_numbers.update(alliance_teams)
+        if playoff_rosters["complete"] and not playoff_rosters["alliances"]:
+            raise HistoricIngestionValidationError(
+                "a complete playoff roster must contain alliances"
+            )
     matches = batch.get("matches")
     if not isinstance(matches, list):
         raise HistoricIngestionValidationError("matches must be a list")
@@ -319,6 +401,24 @@ def ingest_historic_event(
                         "VALUES (?, ?)",
                         (event["key"], team_number),
                     )
+            playoff_rosters = normalized_batch.get("playoff_rosters")
+            if playoff_rosters is not None:
+                roster_data = _json_data(playoff_rosters)
+                connection.execute(
+                    "INSERT INTO playoff_rosters (event_key, source, complete, data) "
+                    "VALUES (?, ?, ?, ?) ON CONFLICT (event_key, source) "
+                    "DO UPDATE SET "
+                    "complete = MAX(playoff_rosters.complete, excluded.complete), "
+                    "data = CASE "
+                    "WHEN playoff_rosters.complete = 1 AND excluded.complete = 0 "
+                    "THEN playoff_rosters.data ELSE excluded.data END",
+                    (
+                        event["key"],
+                        source,
+                        int(playoff_rosters["complete"]),
+                        roster_data,
+                    ),
+                )
             skipped = 0
             replaced = 0
             for match in normalized_batch["matches"]:
@@ -435,5 +535,64 @@ def ingest_historic_event(
             replaced=replaced,
             affected_matches=tuple(sorted(affected_matches)),
         )
+    finally:
+        connection.close()
+
+
+def list_playoff_roster_results(
+    event_key: str,
+    *,
+    database_path: str | Path,
+) -> tuple[PlayoffRosterResult, ...]:
+    """Return roster roles from the highest-priority complete available source."""
+    connection = sqlite3.connect(database_path)
+    try:
+        _initialize_database(connection)
+        source_row = connection.execute(
+            "SELECT source, complete, data FROM playoff_rosters "
+            "WHERE event_key = ? "
+            "ORDER BY complete DESC, "
+            "CASE source WHEN 'manual' THEN 0 WHEN 'tba' THEN 1 "
+            "WHEN 'first' THEN 2 ELSE -1 END DESC LIMIT 1",
+            (event_key,),
+        ).fetchone()
+        if source_row is None:
+            return ()
+        source, complete, roster_data = source_row
+        teams = connection.execute(
+            "SELECT team_number FROM event_teams WHERE event_key = ? "
+            "ORDER BY team_number",
+            (event_key,),
+        ).fetchall()
+        roster = json.loads(roster_data)
+        results: dict[int, PlayoffRosterResult] = {}
+        role_names = {1: "First pick", 2: "Second pick", 3: "Third pick"}
+        for alliance in roster["alliances"]:
+            for position, team_number in enumerate(alliance["teams"]):
+                role = (
+                    "Captain"
+                    if position == 0
+                    else role_names.get(position, f"Pick {position}")
+                )
+                results[team_number] = PlayoffRosterResult(
+                    team_number=team_number,
+                    role=role,
+                    alliance_number=alliance["number"],
+                    source=source,
+                    complete=bool(complete),
+                )
+        if complete:
+            for (team_number,) in teams:
+                results.setdefault(
+                    team_number,
+                    PlayoffRosterResult(
+                        team_number=team_number,
+                        role="Not selected",
+                        alliance_number=None,
+                        source=source,
+                        complete=True,
+                    ),
+                )
+        return tuple(results[team_number] for team_number in sorted(results))
     finally:
         connection.close()

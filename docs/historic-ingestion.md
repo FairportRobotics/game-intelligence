@@ -79,3 +79,23 @@ the teleop subtotal. The mapper does not use `totalPoints`, foul/adjustment
 points, or ranking-point bonuses, and skips phases whose required scores are
 unavailable; it intentionally does not infer a complete schema for every
 historical Season.
+## Playoff roster outcomes
+
+Playoff roster data is optional. When available, provide the final alliance
+rosters in order, with the captain first, and explicitly mark whether the
+rosters are complete:
+
+```python
+batch["playoff_rosters"] = {
+    "complete": True,
+    "alliances": [{"number": 1, "teams": [578, 100, 254, 1678]}],
+}
+```
+
+Ingested roster records remain associated with their source. The public
+`list_playoff_roster_results(event_key, database_path=...)` interface prefers a
+complete roster, then resolves source precedence as FIRST, TBA, and manual.
+It assigns Captain and ordered pick roles; only a complete roster classifies
+event Teams absent from every alliance as `Not selected`. Incomplete roster
+data reports only known alliance membership and never implies an offer,
+decline, or non-selection.

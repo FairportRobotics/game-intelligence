@@ -7,6 +7,7 @@ from backend.historic_ingestion import (
     HistoricIngestionValidationError,
     NormalizedHistoricBatch,
     ingest_historic_event,
+    list_playoff_roster_results,
 )
 
 
@@ -40,6 +41,152 @@ def test_replaying_one_historic_event_uses_its_canonical_database(tmp_path):
     assert replay.created == 0
     assert replay.unchanged == 5
     assert isolated.created == 5
+
+
+def test_complete_playoff_roster_classifies_each_team_with_source_provenance(tmp_path):
+    batch: NormalizedHistoricBatch = {
+        "season": {"year": 2024},
+        "event": {"key": "2024nyro", "name": "Finger Lakes Regional"},
+        "teams": [
+            {"number": 578, "name": "Fairport Robotics"},
+            {"number": 100, "name": "The Wildhats"},
+            {"number": 254, "name": "The Cheesy Poofs"},
+            {"number": 1678, "name": "Citrus Circuits"},
+            {"number": 4414, "name": "High Tide"},
+        ],
+        "matches": [],
+        "source": "tba",
+        "playoff_rosters": {
+            "complete": True,
+            "alliances": [
+                {"number": 1, "teams": [578, 100, 254, 1678]},
+            ],
+        },
+    }
+
+    ingest_historic_event(batch, database_path=tmp_path / "canonical.sqlite3")
+    results = list_playoff_roster_results(
+        "2024nyro", database_path=tmp_path / "canonical.sqlite3"
+    )
+
+    assert [
+        (result.team_number, result.role, result.source, result.complete)
+        for result in results
+    ] == [
+        (100, "First pick", "tba", True),
+        (254, "Second pick", "tba", True),
+        (578, "Captain", "tba", True),
+        (1678, "Third pick", "tba", True),
+        (4414, "Not selected", "tba", True),
+    ]
+
+
+def test_incomplete_playoff_roster_does_not_infer_not_selected(tmp_path):
+    batch: NormalizedHistoricBatch = {
+        "season": {"year": 2024},
+        "event": {"key": "2024nyro", "name": "Finger Lakes Regional"},
+        "teams": [
+            {"number": 578, "name": "Fairport Robotics"},
+            {"number": 100, "name": "The Wildhats"},
+            {"number": 254, "name": "The Cheesy Poofs"},
+        ],
+        "matches": [],
+        "source": "tba",
+        "playoff_rosters": {
+            "complete": False,
+            "alliances": [{"number": 1, "teams": [578, 100]}],
+        },
+    }
+
+    ingest_historic_event(batch, database_path=tmp_path / "canonical.sqlite3")
+    results = list_playoff_roster_results(
+        "2024nyro", database_path=tmp_path / "canonical.sqlite3"
+    )
+
+    assert [
+        (result.team_number, result.role, result.source, result.complete)
+        for result in results
+    ] == [
+        (100, "First pick", "tba", False),
+        (578, "Captain", "tba", False),
+    ]
+
+
+def test_complete_roster_from_first_is_reconciled_over_incomplete_tba_data(
+    tmp_path,
+):
+    database = tmp_path / "canonical.sqlite3"
+    base: NormalizedHistoricBatch = {
+        "season": {"year": 2024},
+        "event": {"key": "2024nyro", "name": "Finger Lakes Regional"},
+        "teams": [
+            {"number": 578, "name": "Fairport Robotics"},
+            {"number": 100, "name": "The Wildhats"},
+            {"number": 254, "name": "The Cheesy Poofs"},
+        ],
+        "matches": [],
+        "source": "tba",
+    }
+    tba_batch = base.copy()
+    tba_batch["playoff_rosters"] = {
+        "complete": False,
+        "alliances": [{"number": 1, "teams": [578]}],
+    }
+    first_batch = base.copy()
+    first_batch["source"] = "first"
+    first_batch["playoff_rosters"] = {
+        "complete": True,
+        "alliances": [{"number": 1, "teams": [578, 100]}],
+    }
+
+    ingest_historic_event(tba_batch, database_path=database)
+    ingest_historic_event(first_batch, database_path=database)
+
+    results = list_playoff_roster_results("2024nyro", database_path=database)
+    assert [
+        (result.team_number, result.role, result.source, result.complete)
+        for result in results
+    ] == [
+        (100, "First pick", "first", True),
+        (254, "Not selected", "first", True),
+        (578, "Captain", "first", True),
+    ]
+
+
+def test_incomplete_refresh_does_not_replace_a_complete_source_roster(tmp_path):
+    database = tmp_path / "canonical.sqlite3"
+    batch: NormalizedHistoricBatch = {
+        "season": {"year": 2024},
+        "event": {"key": "2024nyro", "name": "Finger Lakes Regional"},
+        "teams": [
+            {"number": 578, "name": "Fairport Robotics"},
+            {"number": 100, "name": "The Wildhats"},
+            {"number": 254, "name": "The Cheesy Poofs"},
+        ],
+        "matches": [],
+        "source": "tba",
+        "playoff_rosters": {
+            "complete": True,
+            "alliances": [{"number": 1, "teams": [578, 100]}],
+        },
+    }
+
+    ingest_historic_event(batch, database_path=database)
+    batch["playoff_rosters"] = {
+        "complete": False,
+        "alliances": [{"number": 1, "teams": [578]}],
+    }
+    ingest_historic_event(batch, database_path=database)
+
+    results = list_playoff_roster_results("2024nyro", database_path=database)
+    assert [
+        (result.team_number, result.role, result.source, result.complete)
+        for result in results
+    ] == [
+        (100, "First pick", "tba", True),
+        (254, "Not selected", "tba", True),
+        (578, "Captain", "tba", True),
+    ]
 
 
 def test_empty_match_identity_fails_with_a_validation_error(tmp_path):
