@@ -49,7 +49,7 @@ The driver-controlled match period following Autonomous.
 ## Ratings and outcomes
 
 **TrueSkill rating**:
-An estimate of a team's competitive skill that includes uncertainty about that estimate.
+A Bayesian estimate of a team's competitive skill represented by a Gaussian distribution: μ is estimated skill and σ is uncertainty. Match outcomes update the estimate, and lower σ indicates greater confidence.
 
 **Phase rating**:
 A team's competitive-skill estimate for one match phase, inferred from the results of alliances it joined in that phase.
