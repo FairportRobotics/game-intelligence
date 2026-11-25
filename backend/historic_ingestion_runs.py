@@ -186,12 +186,18 @@ def run_historic_ingestion(
                 try:
                     result = source_adapter.fetch_event(event_key, source)
                 except TransientSourceError:
-                    error = f"Transient source failure after attempt {attempt}"
+                    error = (
+                        f"Transient source failure after attempt {attempt}; "
+                        "verify source availability and retry the run."
+                    )
                     if attempt < max_attempts:
                         continue
                     break
                 except Exception as exception:
-                    error = f"Non-retryable source failure ({type(exception).__name__})"
+                    error = (
+                        f"Non-retryable source failure ({type(exception).__name__}); "
+                        "check the adapter configuration and selected Event/source."
+                    )
                     break
 
                 if result.unchanged:
@@ -203,7 +209,10 @@ def run_historic_ingestion(
                     counts = _empty_counts()
                     counts["skipped"] = 1
                 elif result.batch is None:
-                    error = "Source returned neither a batch nor a status"
+                    error = (
+                        "Source returned neither a batch nor a status; "
+                        "fix the adapter response before retrying."
+                    )
                     break
                 else:
                     try:
@@ -211,7 +220,10 @@ def run_historic_ingestion(
                             result.batch, database_path=canonical_database_path
                         )
                     except Exception as exception:
-                        error = f"Ingestion failed ({type(exception).__name__})"
+                        error = (
+                            f"Ingestion failed ({type(exception).__name__}); "
+                            "correct the normalized batch before resuming."
+                        )
                         break
                     status = "completed"
                     counts = _count_record(ingestion)

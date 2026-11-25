@@ -214,4 +214,5 @@ def test_exhausted_transient_failures_are_reported_without_exception_secrets(
     assert summary.failed_events == ("2024nyro",)
     assert summary.failure_details[0].attempts == 2
     assert "transient source failure" in summary.failure_details[0].reason.lower()
+    assert "retry" in summary.failure_details[0].reason.lower()
     assert "private-token" not in repr(summary)
