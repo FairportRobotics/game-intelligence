@@ -16,7 +16,9 @@ _REQUIRED_COLUMNS: dict[str, tuple[str, ...]] = {
     "events": ("key", "season_year", "data"),
     "event_teams": ("event_key", "team_number"),
     "matches": ("key", "event_key", "phase", "data", "provenance"),
+    "match_results": ("match_key", "source", "data"),
     "match_alliance_teams": ("match_key", "alliance", "position", "team_number"),
+    "playoff_rosters": ("event_key", "source", "complete", "data"),
 }
 _PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     "seasons": ("year",),
@@ -24,15 +26,19 @@ _PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     "events": ("key",),
     "event_teams": ("event_key", "team_number"),
     "matches": ("key",),
+    "match_results": ("match_key", "source"),
     "match_alliance_teams": ("match_key", "alliance", "position"),
+    "playoff_rosters": ("event_key", "source"),
 }
 _REQUIRED_FOREIGN_KEYS = {
     ("events", "season_year", "seasons", "year"),
     ("event_teams", "event_key", "events", "key"),
     ("event_teams", "team_number", "teams", "number"),
     ("matches", "event_key", "events", "key"),
+    ("match_results", "match_key", "matches", "key"),
     ("match_alliance_teams", "match_key", "matches", "key"),
     ("match_alliance_teams", "team_number", "teams", "number"),
+    ("playoff_rosters", "event_key", "events", "key"),
 }
 
 
@@ -82,15 +88,12 @@ def _schema_issues(connection: sqlite3.Connection) -> list[str]:
             )
         primary_key = tuple(
             name
-            for _, name in sorted(
-                (row[5], row[1]) for row in table_info if row[5] > 0
-            )
+            for _, name in sorted((row[5], row[1]) for row in table_info if row[5] > 0)
         )
         expected_key = _PRIMARY_KEYS[table]
         if primary_key != expected_key:
             issues.append(
-                f"table {table!r} must have primary key "
-                f"({', '.join(expected_key)})"
+                f"table {table!r} must have primary key ({', '.join(expected_key)})"
             )
 
     foreign_keys = {
@@ -103,15 +106,13 @@ def _schema_issues(connection: sqlite3.Connection) -> list[str]:
         _REQUIRED_FOREIGN_KEYS - foreign_keys
     ):
         issues.append(
-            f"table {child!r}.{column} must reference "
-            f"{parent!r}.{parent_column}"
+            f"table {child!r}.{column} must reference {parent!r}.{parent_column}"
         )
 
     violations = connection.execute("PRAGMA foreign_key_check").fetchall()
     for table, rowid, parent, _ in violations[:10]:
         issues.append(
-            f"foreign-key violation in {table!r} row {rowid!r} "
-            f"referencing {parent!r}"
+            f"foreign-key violation in {table!r} row {rowid!r} referencing {parent!r}"
         )
     if len(violations) > 10:
         issues.append(f"{len(violations) - 10} additional foreign-key violations")
@@ -208,9 +209,7 @@ def promote_historic_event_database(
         if staged_issues:
             raise CandidateDatabaseValidationError(staged_issues)
 
-        backup_path = (
-            _preserve_canonical(canonical) if canonical.exists() else None
-        )
+        backup_path = _preserve_canonical(canonical) if canonical.exists() else None
         try:
             os.replace(staging_path, canonical)
         except OSError as error:

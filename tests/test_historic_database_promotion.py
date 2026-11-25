@@ -50,13 +50,16 @@ def test_promotion_replaces_canonical_database_and_backup_can_restore_it(
 
     assert promotion.backup_path is not None
     assert promotion.backup_path.is_file()
-    assert ingest_historic_event(
-        candidate_batch, database_path=canonical
-    ).unchanged == 5
+    assert (
+        ingest_historic_event(candidate_batch, database_path=canonical).unchanged == 5
+    )
     assert ingest_historic_event(previous_batch, database_path=canonical).created == 5
-    assert ingest_historic_event(
-        previous_batch, database_path=promotion.backup_path
-    ).unchanged == 5
+    assert (
+        ingest_historic_event(
+            previous_batch, database_path=promotion.backup_path
+        ).unchanged
+        == 5
+    )
 
     promote_historic_event_database(promotion.backup_path, canonical)
     assert ingest_historic_event(previous_batch, database_path=canonical).unchanged == 5
@@ -85,6 +88,25 @@ def test_incomplete_candidate_is_rejected_without_changing_canonical(
     assert ingest_historic_event(candidate_batch, database_path=canonical).created == 5
 
 
+@pytest.mark.parametrize("required_table", ["match_results", "playoff_rosters"])
+def test_candidate_missing_ingestion_provenance_tables_is_rejected(
+    tmp_path: Path, required_table: str
+) -> None:
+    canonical = tmp_path / "canonical.sqlite3"
+    candidate = tmp_path / "candidate.sqlite3"
+    batch = _batch(2024, "2024nyro", 200)
+
+    ingest_historic_event(batch, database_path=candidate)
+    with sqlite3.connect(candidate) as connection:
+        connection.execute(f"DROP TABLE {required_table}")
+
+    with pytest.raises(
+        CandidateDatabaseValidationError,
+        match=f"required table '{required_table}'",
+    ):
+        promote_historic_event_database(candidate, canonical)
+
+
 def test_candidate_with_broken_team_relationship_is_rejected(
     tmp_path: Path,
 ) -> None:
@@ -98,9 +120,7 @@ def test_candidate_with_broken_team_relationship_is_rejected(
     with sqlite3.connect(candidate) as connection:
         connection.execute("DELETE FROM teams WHERE number = 200")
 
-    with pytest.raises(
-        CandidateDatabaseValidationError, match="foreign-key violation"
-    ):
+    with pytest.raises(CandidateDatabaseValidationError, match="foreign-key violation"):
         promote_historic_event_database(candidate, canonical)
 
     assert ingest_historic_event(previous_batch, database_path=canonical).unchanged == 5
