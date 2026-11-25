@@ -1,3 +1,6 @@
+import json
+import sqlite3
+
 import pytest
 
 from backend.historic_ingestion import (
@@ -195,3 +198,105 @@ def test_event_participating_team_changes_update_the_event(tmp_path):
     assert changed.created == 1
     assert changed.updated == 1
     assert changed.unchanged == 4
+
+
+def test_manual_match_result_is_stored_as_a_provisional_source(tmp_path):
+    batch: NormalizedHistoricBatch = {
+        "season": {"year": 2024},
+        "event": {"key": "2024nyro", "name": "Finger Lakes Regional"},
+        "teams": [
+            {"number": 578, "name": "Fairport Robotics"},
+            {"number": 100, "name": "The Wildhats"},
+        ],
+        "matches": [
+            {
+                "key": "2024nyro_qm1",
+                "type": "qualification",
+                "number": 1,
+                "red": [578],
+                "blue": [100],
+                "result": {"red_score": 40, "blue_score": 35},
+            }
+        ],
+        "source": "manual",
+    }
+    database = tmp_path / "canonical.sqlite3"
+
+    summary = ingest_historic_event(batch, database_path=database)
+
+    with sqlite3.connect(database) as connection:
+        canonical_match = connection.execute(
+            "SELECT data, provenance FROM matches WHERE key = '2024nyro_qm1'"
+        ).fetchone()
+        stored_source = connection.execute(
+            "SELECT source, data FROM match_results WHERE match_key = '2024nyro_qm1'"
+        ).fetchone()
+
+    assert summary.affected_matches == ("2024nyro_qm1",)
+    assert json.loads(canonical_match[0])["result"] == {
+        "red_score": 40,
+        "blue_score": 35,
+    }
+    assert json.loads(canonical_match[1])["source"] == "manual"
+    assert stored_source[0] == "manual"
+    assert json.loads(stored_source[1]) == {
+        "red_score": 40,
+        "blue_score": 35,
+    }
+
+
+def test_result_precedence_is_independent_of_source_arrival_order(tmp_path):
+    batch: NormalizedHistoricBatch = {
+        "season": {"year": 2024},
+        "event": {"key": "2024nyro", "name": "Finger Lakes Regional"},
+        "teams": [
+            {"number": 578, "name": "Fairport Robotics"},
+            {"number": 100, "name": "The Wildhats"},
+        ],
+        "matches": [
+            {
+                "key": "2024nyro_qm1",
+                "type": "qualification",
+                "number": 1,
+                "red": [578],
+                "blue": [100],
+                "result": {"red_score": 40, "blue_score": 35},
+            }
+        ],
+        "source": "manual",
+    }
+    database = tmp_path / "canonical.sqlite3"
+
+    manual = ingest_historic_event(batch, database_path=database)
+    batch["source"] = "tba"
+    batch["matches"][0]["result"] = {"red_score": 50, "blue_score": 45}
+    tba = ingest_historic_event(batch, database_path=database)
+    batch["source"] = "first"
+    batch["matches"][0]["result"] = {"red_score": 60, "blue_score": 55}
+    first = ingest_historic_event(batch, database_path=database)
+    batch["source"] = "manual"
+    batch["matches"][0]["result"] = {"red_score": 1, "blue_score": 0}
+    lower_priority_replay = ingest_historic_event(batch, database_path=database)
+
+    with sqlite3.connect(database) as connection:
+        canonical_match = connection.execute(
+            "SELECT data, provenance FROM matches WHERE key = '2024nyro_qm1'"
+        ).fetchone()
+        stored_sources = connection.execute(
+            "SELECT source FROM match_results WHERE match_key = '2024nyro_qm1' "
+            "ORDER BY source"
+        ).fetchall()
+
+    assert manual.replaced == 0
+    assert tba.replaced == 1
+    assert tba.affected_matches == ("2024nyro_qm1",)
+    assert first.replaced == 1
+    assert first.affected_matches == ("2024nyro_qm1",)
+    assert lower_priority_replay.replaced == 0
+    assert lower_priority_replay.affected_matches == ()
+    assert json.loads(canonical_match[0])["result"] == {
+        "red_score": 60,
+        "blue_score": 55,
+    }
+    assert json.loads(canonical_match[1])["source"] == "first"
+    assert stored_sources == [("first",), ("manual",), ("tba",)]
