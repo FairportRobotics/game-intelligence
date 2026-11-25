@@ -1,0 +1,116 @@
+{
+  ".vscode/settings.json": {
+    "mtime": 1795618762.9232302,
+    "seen": 1795620424.913436,
+    "ast_hash": "fc61695ef7c764603a2393e637e53066",
+    "semantic_hash": "fc61695ef7c764603a2393e637e53066"
+  },
+  "backend/__init__.py": {
+    "mtime": 1795618157.486792,
+    "seen": 1795620424.9134483,
+    "ast_hash": "3b7edbaa66e796db02f43ef54782c5f1",
+    "semantic_hash": "3b7edbaa66e796db02f43ef54782c5f1"
+  },
+  "backend/historic_ingestion.py": {
+    "mtime": 1795618157.5357838,
+    "seen": 1795620424.9134545,
+    "ast_hash": "1c77112a539d23942450812b26018d00",
+    "semantic_hash": "1c77112a539d23942450812b26018d00"
+  },
+  "docs/reference/TBA_api_v3.json": {
+    "mtime": 1795616734.211088,
+    "seen": 1795620424.9134603,
+    "ast_hash": "284285c167c4ea4d4853e4f1a280e2a4",
+    "semantic_hash": "284285c167c4ea4d4853e4f1a280e2a4"
+  },
+  "pyproject.toml": {
+    "mtime": 1795619036.7368283,
+    "seen": 1795620424.9134643,
+    "ast_hash": "ad5ce3b5f62bece61dc7f4658dd83bfb",
+    "semantic_hash": "ad5ce3b5f62bece61dc7f4658dd83bfb"
+  },
+  "tests/test_historic_ingestion.py": {
+    "mtime": 1795618353.3855262,
+    "seen": 1795620424.9134684,
+    "ast_hash": "52db4043c2aab394ec66754c7cdfe009",
+    "semantic_hash": "52db4043c2aab394ec66754c7cdfe009"
+  },
+  ".github/copilot-instructions.md": {
+    "mtime": 1795619926.3503437,
+    "seen": 1795620424.9134724,
+    "ast_hash": "ec2dc0dc7bef63488889f34de2f5584d",
+    "semantic_hash": "ec2dc0dc7bef63488889f34de2f5584d"
+  },
+  "AGENTS.md": {
+    "mtime": 1795618631.3487608,
+    "seen": 1795620424.9134765,
+    "ast_hash": "9659e5a5a4ca6b442b4f828e7293c967",
+    "semantic_hash": "9659e5a5a4ca6b442b4f828e7293c967"
+  },
+  "GLOSSARY.md": {
+    "mtime": 1795616734.208088,
+    "seen": 1795620424.91348,
+    "ast_hash": "bdbc3350955813341cb36e580693eced",
+    "semantic_hash": "bdbc3350955813341cb36e580693eced"
+  },
+  "README.md": {
+    "mtime": 1795616734.2090878,
+    "seen": 1795620424.9134839,
+    "ast_hash": "1a6e5bf030beb83efe711b7adb00c09f",
+    "semantic_hash": "1a6e5bf030beb83efe711b7adb00c09f"
+  },
+  "docs/adr/0001-single-writer-sqlite-event-handoff.md": {
+    "mtime": 1795616734.2100751,
+    "seen": 1795620424.9134877,
+    "ast_hash": "11f68ad4e9fc41a4b26a62b297b3c664",
+    "semantic_hash": "11f68ad4e9fc41a4b26a62b297b3c664"
+  },
+  "docs/adr/0002-match-result-source-precedence.md": {
+    "mtime": 1795616734.210259,
+    "seen": 1795620424.9134927,
+    "ast_hash": "b65218df998e8a50a0b40b7ca543ea74",
+    "semantic_hash": "b65218df998e8a50a0b40b7ca543ea74"
+  },
+  "docs/adr/0003-all-time-and-season-rating-streams.md": {
+    "mtime": 1795616734.210259,
+    "seen": 1795620424.9134965,
+    "ast_hash": "d17ff81710eb139d3facd6792036931b",
+    "semantic_hash": "d17ff81710eb139d3facd6792036931b"
+  },
+  "docs/adr/0004-phase-specific-ratings.md": {
+    "mtime": 1795616734.210259,
+    "seen": 1795620424.9135,
+    "ast_hash": "7530d201298a7a1c73557e9c48da0203",
+    "semantic_hash": "7530d201298a7a1c73557e9c48da0203"
+  },
+  "docs/adr/0005-alliance-selection-pick-lists.md": {
+    "mtime": 1795616734.210259,
+    "seen": 1795620424.9135034,
+    "ast_hash": "e545683e0315c94b4058b78f7488e819",
+    "semantic_hash": "e545683e0315c94b4058b78f7488e819"
+  },
+  "docs/agents/domain.md": {
+    "mtime": 1795616892.5262988,
+    "seen": 1795620424.913507,
+    "ast_hash": "0bdefda440c1135ca472511883cbf29c",
+    "semantic_hash": "0bdefda440c1135ca472511883cbf29c"
+  },
+  "docs/agents/issue-tracker.md": {
+    "mtime": 1795616892.423298,
+    "seen": 1795620424.9135103,
+    "ast_hash": "9fefe5185ea0d3ab8fca07b3478683c2",
+    "semantic_hash": "9fefe5185ea0d3ab8fca07b3478683c2"
+  },
+  "docs/agents/triage-labels.md": {
+    "mtime": 1795616892.471104,
+    "seen": 1795620424.9135141,
+    "ast_hash": "2a3cbc5112dede7ac7ce0dbefb7cb0c9",
+    "semantic_hash": "2a3cbc5112dede7ac7ce0dbefb7cb0c9"
+  },
+  "docs/engineering-standards.md": {
+    "mtime": 1795618898.187573,
+    "seen": 1795620424.9135177,
+    "ast_hash": "33ef0fd377d144c101b0afd8dcf30011",
+    "semantic_hash": "33ef0fd377d144c101b0afd8dcf30011"
+  }
+}
