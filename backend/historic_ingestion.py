@@ -29,6 +29,8 @@ class MatchInput(TypedDict):
     red: list[int]
     blue: list[int]
     result: NotRequired[dict[str, int]]
+    phase_scores: NotRequired[dict[str, object]]
+    score_breakdown: NotRequired[dict[str, object]]
 
 
 class NormalizedHistoricBatch(TypedDict):

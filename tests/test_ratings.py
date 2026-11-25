@@ -8,6 +8,108 @@ from backend.historic_ingestion import (
 from backend.ratings import get_team_ratings, rebuild_ratings
 
 
+def test_rebuilding_ratings_persists_independent_phase_streams(tmp_path):
+    database = tmp_path / "canonical.sqlite3"
+    batch: NormalizedHistoricBatch = {
+        "season": {"year": 2024},
+        "event": {"key": "2024nyro", "name": "Finger Lakes Regional"},
+        "teams": [
+            {"number": 578, "name": "Fairport Robotics"},
+            {"number": 100, "name": "The Wildhats"},
+        ],
+        "matches": [
+            {
+                "key": "2024nyro_qm1",
+                "type": "qualification",
+                "number": 1,
+                "red": [578],
+                "blue": [100],
+                "result": {"red_score": 40, "blue_score": 35},
+                "phase_scores": {
+                    "red": {"autonomous": 20, "teleop": 15, "end_game": 5},
+                    "blue": {"autonomous": 10, "teleop": 20, "end_game": 5},
+                },
+            }
+        ],
+        "source": "first",
+    }
+
+    ingest_historic_event(batch, database_path=database)
+
+    rebuild_ratings(database)
+
+    autonomous = get_team_ratings(database, 578, phase="autonomous")
+    teleop = get_team_ratings(database, 578, phase="teleop")
+    end_game = get_team_ratings(database, 578, phase="end_game")
+    assert tuple(rating.scope for rating in autonomous) == ("all_time", "season")
+    assert tuple(rating.elo for rating in autonomous) == (1516.0, 1516.0)
+    assert tuple(rating.elo for rating in teleop) == (1484.0, 1484.0)
+    assert tuple(rating.elo for rating in end_game) == (1500.0, 1500.0)
+    assert tuple(rating.phase for rating in autonomous) == (
+        "autonomous",
+        "autonomous",
+    )
+    assert tuple(rating.elo for rating in get_team_ratings(database, 578)) == (
+        1516.0,
+        1516.0,
+    )
+
+
+def test_rebuilding_phase_ratings_normalizes_tba_subtotals(tmp_path):
+    database = tmp_path / "canonical.sqlite3"
+    batch: NormalizedHistoricBatch = {
+        "season": {"year": 2018},
+        "event": {"key": "2018nyro", "name": "Finger Lakes Regional"},
+        "teams": [
+            {"number": 578, "name": "Fairport Robotics"},
+            {"number": 100, "name": "The Wildhats"},
+        ],
+        "matches": [
+            {
+                "key": "2018nyro_qm1",
+                "type": "qualification",
+                "number": 1,
+                "red": [578],
+                "blue": [100],
+                "result": {"red_score": 100, "blue_score": 90},
+                "score_breakdown": {
+                    "red": {
+                        "autoPoints": 10,
+                        "teleopPoints": 50,
+                        "endgamePoints": 20,
+                        "foulPoints": 99,
+                        "adjustPoints": 80,
+                        "rp": 4,
+                    },
+                    "blue": {
+                        "autoPoints": 10,
+                        "teleopPoints": 40,
+                        "endgamePoints": 20,
+                        "foulPoints": 0,
+                        "adjustPoints": 0,
+                        "rp": 0,
+                    },
+                },
+            }
+        ],
+        "source": "first",
+    }
+
+    ingest_historic_event(batch, database_path=database)
+
+    rebuild_ratings(database)
+
+    assert tuple(
+        rating.elo for rating in get_team_ratings(database, 578, phase="autonomous")
+    ) == (1500.0, 1500.0)
+    assert tuple(
+        rating.elo for rating in get_team_ratings(database, 578, phase="teleop")
+    ) == (1516.0, 1516.0)
+    assert tuple(
+        rating.elo for rating in get_team_ratings(database, 578, phase="end_game")
+    ) == (1500.0, 1500.0)
+
+
 def test_rebuilding_ratings_exposes_all_time_and_season_team_streams(tmp_path):
     database = tmp_path / "canonical.sqlite3"
     batch: NormalizedHistoricBatch = {

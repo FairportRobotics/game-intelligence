@@ -20,6 +20,8 @@ _TRUESKILL_DRAW_PROBABILITY = 0.1
 _NORMAL = NormalDist()
 
 RatingScope = Literal["all_time", "season"]
+PhaseRating = Literal["autonomous", "teleop", "end_game"]
+RatingPhase = Literal["overall", "autonomous", "teleop", "end_game"]
 
 
 @dataclass(frozen=True)
@@ -31,6 +33,7 @@ class TeamRating:
     elo: float
     trueskill_mu: float
     trueskill_sigma: float
+    phase: RatingPhase = "overall"
 
 
 @dataclass(frozen=True)
@@ -42,8 +45,9 @@ class _Match:
     number: int
     red: tuple[int, ...]
     blue: tuple[int, ...]
-    red_score: int
-    blue_score: int
+    red_score: int | None
+    blue_score: int | None
+    phase_scores: tuple[tuple[PhaseRating, int, int], ...]
 
 
 @dataclass
@@ -64,6 +68,8 @@ def _create_rating_table(connection: sqlite3.Connection) -> None:
             team_number INTEGER NOT NULL REFERENCES teams(number),
             scope TEXT NOT NULL CHECK (scope IN ('all_time', 'season')),
             season_year INTEGER,
+            phase TEXT NOT NULL DEFAULT 'overall'
+                CHECK (phase IN ('overall', 'autonomous', 'teleop', 'end_game')),
             elo REAL NOT NULL,
             trueskill_mu REAL NOT NULL,
             trueskill_sigma REAL NOT NULL,
@@ -72,9 +78,17 @@ def _create_rating_table(connection: sqlite3.Connection) -> None:
                 OR (scope = 'season' AND season_year IS NOT NULL)
             )
         );
-        CREATE UNIQUE INDEX IF NOT EXISTS team_ratings_identity
-            ON team_ratings (team_number, scope, COALESCE(season_year, 0));
         """
+    )
+    columns = {row[1] for row in connection.execute("PRAGMA table_info(team_ratings)")}
+    if "phase" not in columns:
+        connection.execute(
+            "ALTER TABLE team_ratings ADD COLUMN phase TEXT NOT NULL DEFAULT 'overall'"
+        )
+    connection.execute("DROP INDEX IF EXISTS team_ratings_identity")
+    connection.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS team_ratings_identity "
+        "ON team_ratings (team_number, scope, COALESCE(season_year, 0), phase)"
     )
 
 
@@ -107,19 +121,22 @@ def _parse_match(
         raise RatingDataError(f"Match {key!r} has invalid canonical data")
 
     result = data.get("result")
-    if result is None:
-        return None
-    if not isinstance(result, dict):
-        raise RatingDataError(f"Match {key!r} has an invalid official result")
-    red_score = result.get("red_score")
-    blue_score = result.get("blue_score")
-    if (
-        type(red_score) is not int
-        or red_score < 0
-        or type(blue_score) is not int
-        or blue_score < 0
-    ):
-        raise RatingDataError(f"Match {key!r} has an invalid official result")
+    red_score: int | None = None
+    blue_score: int | None = None
+    if result is not None:
+        if not isinstance(result, dict):
+            raise RatingDataError(f"Match {key!r} has an invalid official result")
+        red_value = result.get("red_score")
+        blue_value = result.get("blue_score")
+        if (
+            type(red_value) is not int
+            or red_value < 0
+            or type(blue_value) is not int
+            or blue_value < 0
+        ):
+            raise RatingDataError(f"Match {key!r} has an invalid official result")
+        red_score = red_value
+        blue_score = blue_value
 
     number = data.get("number")
     if type(number) is not int or number <= 0:
@@ -128,6 +145,9 @@ def _parse_match(
     blue = _team_numbers(data.get("blue"), key, "blue")
     if set(red).intersection(blue):
         raise RatingDataError(f"Match {key!r} lists a Team on both alliances")
+    phase_scores = _phase_scores(data, season_year)
+    if red_score is None and not phase_scores:
+        return None
     return _Match(
         key,
         event_key,
@@ -138,7 +158,127 @@ def _parse_match(
         blue,
         red_score,
         blue_score,
+        phase_scores,
     )
+
+
+def _phase_scores(
+    data: dict[str, object], season_year: int
+) -> tuple[tuple[PhaseRating, int, int], ...]:
+    scores = data.get("phase_scores")
+    if isinstance(scores, dict):
+        red_scores = scores.get("red")
+        blue_scores = scores.get("blue")
+        if not isinstance(red_scores, dict) or not isinstance(blue_scores, dict):
+            return ()
+        return _validated_phase_scores(red_scores, blue_scores)
+    return _tba_phase_scores(data.get("score_breakdown"), season_year)
+
+
+def _validated_phase_scores(
+    red_scores: dict[str, object], blue_scores: dict[str, object]
+) -> tuple[tuple[PhaseRating, int, int], ...]:
+    phases: tuple[PhaseRating, ...] = ("autonomous", "teleop", "end_game")
+    return tuple(
+        (phase, red_score, blue_score)
+        for phase in phases
+        if type(red_score := red_scores.get(phase)) is int
+        and red_score >= 0
+        and type(blue_score := blue_scores.get(phase)) is int
+        and blue_score >= 0
+    )
+
+
+def _tba_phase_scores(
+    breakdown: object, season_year: int
+) -> tuple[tuple[PhaseRating, int, int], ...]:
+    if not isinstance(breakdown, dict):
+        return ()
+    red = breakdown.get("red")
+    blue = breakdown.get("blue")
+    if not isinstance(red, dict) or not isinstance(blue, dict):
+        return ()
+
+    end_game_fields = {
+        2015: (("endgamePoints",), ("endgame_points",)),
+        2016: (("endgamePoints",), ("endgame_points",)),
+        2017: (("endgamePoints",), ("endgame_points",)),
+        2018: (("endgamePoints",), ("endgame_points",)),
+        2019: (
+            ("habClimbPoints",),
+            ("endgamePoints",),
+            ("endgame_points",),
+        ),
+        2020: (("endgamePoints",), ("endgame_points",)),
+        2022: (("endgamePoints",), ("endgame_points",)),
+        2023: (
+            ("endGameChargeStationPoints", "endGameParkPoints"),
+            ("endgamePoints",),
+            ("endgame_points",),
+        ),
+        2024: (
+            (
+                "endGameHarmonyPoints",
+                "endGameNoteInTrapPoints",
+                "endGameOnStagePoints",
+                "endGameParkPoints",
+                "endGameSpotLightBonusPoints",
+            ),
+            ("endgamePoints",),
+            ("endgame_points",),
+        ),
+        2025: (
+            ("endGameBargePoints",),
+            ("endgamePoints",),
+            ("endgame_points",),
+        ),
+        2026: (
+            ("endGameTowerPoints",),
+            ("endgamePoints",),
+            ("endgame_points",),
+        ),
+    }.get(season_year, ())
+    auto_keys = ("autoPoints", "auto_points", "totalAutoPoints")
+    teleop_keys = ("teleopPoints", "teleop_points", "totalTeleopPoints")
+    phase_scores: dict[str, dict[str, object]] = {"red": {}, "blue": {}}
+    for alliance, values in (("red", red), ("blue", blue)):
+        auto_score = _first_score(values, auto_keys)
+        if auto_score is not None:
+            phase_scores[alliance]["autonomous"] = auto_score
+        end_game_score = _first_sum_scores(values, end_game_fields)
+        if end_game_score is not None:
+            phase_scores[alliance]["end_game"] = end_game_score
+        teleop_total = _first_score(values, teleop_keys)
+        if teleop_total is not None and end_game_score is not None:
+            teleop_score = teleop_total - end_game_score
+            if teleop_score >= 0:
+                phase_scores[alliance]["teleop"] = teleop_score
+    return _validated_phase_scores(phase_scores["red"], phase_scores["blue"])
+
+
+def _first_score(values: dict[str, object], keys: tuple[str, ...]) -> int | None:
+    for key in keys:
+        if key in values:
+            score = values[key]
+            return score if type(score) is int and score >= 0 else None
+    return None
+
+
+def _sum_scores(values: dict[str, object], keys: tuple[str, ...]) -> int | None:
+    scores = [_first_score(values, (key,)) for key in keys]
+    if any(score is None for score in scores):
+        return None
+    return sum(score for score in scores if score is not None)
+
+
+def _first_sum_scores(
+    values: dict[str, object], alternatives: tuple[tuple[str, ...], ...]
+) -> int | None:
+    for fields in alternatives:
+        score = _sum_scores(values, fields)
+        if score is not None:
+            return score
+    return None
 
 
 def _load_matches(connection: sqlite3.Connection) -> list[_Match]:
@@ -275,9 +415,15 @@ def _update_trueskill(
         )
 
 
-def _update_stream(ratings: dict[int, _Rating], match: _Match) -> None:
-    _update_elo(ratings, match.red, match.blue, match.red_score, match.blue_score)
-    _update_trueskill(ratings, match.red, match.blue, match.red_score, match.blue_score)
+def _update_stream(
+    ratings: dict[int, _Rating],
+    red: tuple[int, ...],
+    blue: tuple[int, ...],
+    red_score: int,
+    blue_score: int,
+) -> None:
+    _update_elo(ratings, red, blue, red_score, blue_score)
+    _update_trueskill(ratings, red, blue, red_score, blue_score)
 
 
 def rebuild_ratings(database_path: str | Path) -> None:
@@ -290,51 +436,91 @@ def rebuild_ratings(database_path: str | Path) -> None:
     try:
         _create_rating_table(connection)
         matches = _load_matches(connection)
-        all_time: dict[int, _Rating] = {}
-        seasons: dict[int, dict[int, _Rating]] = {}
+        all_time: dict[RatingPhase, dict[int, _Rating]] = {"overall": {}}
+        seasons: dict[int, dict[RatingPhase, dict[int, _Rating]]] = {}
         for match in matches:
-            _update_stream(all_time, match)
-            _update_stream(seasons.setdefault(match.season_year, {}), match)
+            season_ratings = seasons.setdefault(match.season_year, {"overall": {}})
+            if match.red_score is not None and match.blue_score is not None:
+                _update_stream(
+                    all_time["overall"],
+                    match.red,
+                    match.blue,
+                    match.red_score,
+                    match.blue_score,
+                )
+                _update_stream(
+                    season_ratings["overall"],
+                    match.red,
+                    match.blue,
+                    match.red_score,
+                    match.blue_score,
+                )
+            for phase, red_score, blue_score in match.phase_scores:
+                all_time.setdefault(phase, {})
+                season_ratings.setdefault(phase, {})
+                _update_stream(
+                    all_time[phase], match.red, match.blue, red_score, blue_score
+                )
+                _update_stream(
+                    season_ratings[phase],
+                    match.red,
+                    match.blue,
+                    red_score,
+                    blue_score,
+                )
 
         with connection:
             connection.execute("DELETE FROM team_ratings")
-            for team_number, rating in sorted(all_time.items()):
-                connection.execute(
-                    "INSERT INTO team_ratings "
-                    "(team_number, scope, season_year, elo, trueskill_mu, "
-                    "trueskill_sigma) VALUES (?, 'all_time', NULL, ?, ?, ?)",
-                    (team_number, rating.elo, rating.mu, rating.sigma),
-                )
-            for season_year, season_ratings in sorted(seasons.items()):
-                for team_number, rating in sorted(season_ratings.items()):
+            for phase, phase_ratings in all_time.items():
+                for team_number, rating in sorted(phase_ratings.items()):
                     connection.execute(
                         "INSERT INTO team_ratings "
-                        "(team_number, scope, season_year, elo, trueskill_mu, "
-                        "trueskill_sigma) VALUES (?, 'season', ?, ?, ?, ?)",
+                        "(team_number, scope, season_year, phase, elo, "
+                        "trueskill_mu, trueskill_sigma) "
+                        "VALUES (?, 'all_time', NULL, ?, ?, ?, ?)",
                         (
                             team_number,
-                            season_year,
+                            phase,
                             rating.elo,
                             rating.mu,
                             rating.sigma,
                         ),
                     )
+            for season_year, season_streams in sorted(seasons.items()):
+                for phase, phase_ratings in season_streams.items():
+                    for team_number, rating in sorted(phase_ratings.items()):
+                        connection.execute(
+                            "INSERT INTO team_ratings "
+                            "(team_number, scope, season_year, phase, elo, "
+                            "trueskill_mu, trueskill_sigma) "
+                            "VALUES (?, 'season', ?, ?, ?, ?, ?)",
+                            (
+                                team_number,
+                                season_year,
+                                phase,
+                                rating.elo,
+                                rating.mu,
+                                rating.sigma,
+                            ),
+                        )
     finally:
         connection.close()
 
 
 def get_team_ratings(
-    database_path: str | Path, team_number: int
+    database_path: str | Path,
+    team_number: int,
+    phase: RatingPhase = "overall",
 ) -> tuple[TeamRating, ...]:
     """Return a Team's all-time and season rating snapshots, if rebuilt."""
     try:
         with sqlite3.connect(database_path) as connection:
             rows = connection.execute(
-                "SELECT scope, season_year, elo, trueskill_mu, trueskill_sigma "
-                "FROM team_ratings WHERE team_number = ? "
+                "SELECT scope, season_year, elo, trueskill_mu, trueskill_sigma, phase "
+                "FROM team_ratings WHERE team_number = ? AND phase = ? "
                 "ORDER BY CASE scope WHEN 'all_time' THEN 0 ELSE 1 END, "
                 "season_year",
-                (team_number,),
+                (team_number, phase),
             ).fetchall()
     except sqlite3.Error as error:
         raise RatingDataError(
@@ -347,6 +533,7 @@ def get_team_ratings(
             elo=row[2],
             trueskill_mu=row[3],
             trueskill_sigma=row[4],
+            phase=row[5],
         )
         for row in rows
     )

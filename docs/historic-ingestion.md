@@ -67,3 +67,15 @@ ratings = get_team_ratings("canonical.sqlite3", team_number=578)
 
 `get_team_ratings` returns `TeamRating` snapshots with `scope`, optional
 `season_year`, `elo`, `trueskill_mu`, and `trueskill_sigma` fields.
+
+Pass `phase="autonomous"`, `"teleop"`, or `"end_game"` to query the independent
+phase streams; omitting it keeps the original overall rating query. Canonical
+Match data may provide disjoint alliance totals in `phase_scores`, keyed by
+`red`/`blue` and `autonomous`/`teleop`/`end_game`. When only a TBA
+`score_breakdown` is present, the rebuild recognizes season-specific autonomous,
+teleop, and end-game subtotal keys (including common camelCase and snake_case
+aliases). Teleop is derived by subtracting an available end-game subtotal from
+the teleop subtotal. The mapper does not use `totalPoints`, foul/adjustment
+points, or ranking-point bonuses, and skips phases whose required scores are
+unavailable; it intentionally does not infer a complete schema for every
+historical Season.
