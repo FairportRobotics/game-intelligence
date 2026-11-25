@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, NotRequired, TypedDict
 
+from backend.match_timestamp import parse_match_timestamp
+from backend.tba_phase_score_normalizer import normalize_tba_phase_scores
+
 MatchType = Literal["qualification", "playoff", "practice", "offseason"]
 MatchResultSource = Literal["tba", "TBA", "first", "FIRST", "manual"]
 
@@ -28,6 +31,7 @@ class MatchInput(TypedDict):
     number: int
     red: list[int]
     blue: list[int]
+    timestamp: NotRequired[str]
     result: NotRequired[dict[str, int]]
     phase_scores: NotRequired[dict[str, object]]
     score_breakdown: NotRequired[dict[str, object]]
@@ -53,6 +57,13 @@ class NormalizedHistoricBatch(TypedDict):
 
 
 @dataclass(frozen=True)
+class MatchReplacement:
+    match_key: str
+    previous_source: str
+    winning_source: str
+
+
+@dataclass(frozen=True)
 class IngestionSummary:
     created: int
     unchanged: int
@@ -61,6 +72,7 @@ class IngestionSummary:
     failed: int = 0
     replaced: int = 0
     affected_matches: tuple[str, ...] = ()
+    replacements: tuple[MatchReplacement, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -74,6 +86,24 @@ class PlayoffRosterResult:
 
 class HistoricIngestionValidationError(ValueError):
     """Raised when a normalized historic batch lacks valid canonical data."""
+
+
+_SOURCE_PRIORITY = {"manual": 0, "tba": 1, "first": 2}
+
+
+def _source_priority(source: str) -> int:
+    return _SOURCE_PRIORITY.get(source, -1)
+
+
+def _match_result_winner(
+    connection: sqlite3.Connection, match_key: str
+) -> tuple[str, str] | None:
+    results = connection.execute(
+        "SELECT source, data FROM match_results WHERE match_key = ?", (match_key,)
+    ).fetchall()
+    if not results:
+        return None
+    return max(results, key=lambda result: _source_priority(result[0]))
 
 
 def _initialize_database(connection: sqlite3.Connection) -> None:
@@ -339,6 +369,20 @@ def _validate_batch(batch: NormalizedHistoricBatch) -> None:
                     f"match {key!r} result must contain non-negative integer "
                     "red_score and blue_score values"
                 )
+        requires_timestamp = match_type in {"qualification", "playoff"} and any(
+            field in match for field in ("result", "phase_scores", "score_breakdown")
+        )
+        if requires_timestamp and "timestamp" not in match:
+            raise HistoricIngestionValidationError(
+                f"match {key!r} requires a timestamp before rating updates"
+            )
+        if "timestamp" in match:
+            try:
+                parse_match_timestamp(match["timestamp"])
+            except ValueError as error:
+                raise HistoricIngestionValidationError(
+                    f"match {key!r} {error}"
+                ) from error
 
 
 def ingest_historic_event(
@@ -352,6 +396,7 @@ def ingest_historic_event(
         _initialize_database(connection)
         counts = {"created": 0, "unchanged": 0, "updated": 0}
         affected_matches: list[str] = []
+        replacements: list[MatchReplacement] = []
         with connection:
             season = normalized_batch["season"]
             event = normalized_batch["event"]
@@ -428,6 +473,16 @@ def ingest_historic_event(
                 phase = match["type"]
                 match_data = dict(match)
                 result = match_data.pop("result", None)
+                if "timestamp" in match_data:
+                    match_data["timestamp"] = parse_match_timestamp(
+                        match_data["timestamp"]
+                    ).isoformat()
+                score_breakdown = match_data.pop("score_breakdown", None)
+                if source == "tba" and score_breakdown is not None:
+                    match_data.setdefault(
+                        "phase_scores",
+                        normalize_tba_phase_scores(score_breakdown, season["year"]),
+                    )
                 prior_canonical = connection.execute(
                     "SELECT data, provenance, phase, event_key FROM matches "
                     "WHERE key = ?",
@@ -446,12 +501,7 @@ def ingest_historic_event(
                             _json_data({"source": source, "source_key": match["key"]}),
                         ),
                     )
-                previous_winner = connection.execute(
-                    "SELECT source, data FROM match_results WHERE match_key = ? "
-                    "ORDER BY CASE source WHEN 'manual' THEN 0 WHEN 'tba' THEN 1 "
-                    "WHEN 'first' THEN 2 ELSE -1 END DESC LIMIT 1",
-                    (match["key"],),
-                ).fetchone()
+                previous_winner = _match_result_winner(connection, match["key"])
                 if result is not None:
                     result_data = _json_data(result)
                     previous_result = connection.execute(
@@ -469,17 +519,18 @@ def ingest_historic_event(
                         previous_result != (result_data,)
                         and previous_winner is not None
                     ):
-                        replaced += int(
-                            source != previous_winner[0]
-                            and {"manual": 0, "tba": 1, "first": 2}[source]
-                            > {"manual": 0, "tba": 1, "first": 2}[previous_winner[0]]
-                        )
-                winner = connection.execute(
-                    "SELECT source, data FROM match_results WHERE match_key = ? "
-                    "ORDER BY CASE source WHEN 'manual' THEN 0 WHEN 'tba' THEN 1 "
-                    "WHEN 'first' THEN 2 ELSE -1 END DESC LIMIT 1",
-                    (match["key"],),
-                ).fetchone()
+                        if _source_priority(source) > _source_priority(
+                            previous_winner[0]
+                        ):
+                            replaced += 1
+                            replacements.append(
+                                MatchReplacement(
+                                    match_key=match["key"],
+                                    previous_source=previous_winner[0],
+                                    winning_source=source,
+                                )
+                            )
+                winner = _match_result_winner(connection, match["key"])
                 canonical_data = dict(match_data)
                 canonical_source = source
                 if winner is not None:
@@ -534,6 +585,7 @@ def ingest_historic_event(
             skipped=skipped,
             replaced=replaced,
             affected_matches=tuple(sorted(affected_matches)),
+            replacements=tuple(replacements),
         )
     finally:
         connection.close()
@@ -548,14 +600,18 @@ def list_playoff_roster_results(
     connection = sqlite3.connect(database_path)
     try:
         _initialize_database(connection)
-        source_row = connection.execute(
-            "SELECT source, complete, data FROM playoff_rosters "
-            "WHERE event_key = ? "
-            "ORDER BY complete DESC, "
-            "CASE source WHEN 'manual' THEN 0 WHEN 'tba' THEN 1 "
-            "WHEN 'first' THEN 2 ELSE -1 END DESC LIMIT 1",
+        roster_records = connection.execute(
+            "SELECT source, complete, data FROM playoff_rosters WHERE event_key = ?",
             (event_key,),
-        ).fetchone()
+        ).fetchall()
+        source_row = (
+            max(
+                roster_records,
+                key=lambda row: (row[1], _source_priority(row[0])),
+            )
+            if roster_records
+            else None
+        )
         if source_row is None:
             return ()
         source, complete, roster_data = source_row

@@ -3,7 +3,8 @@
 `backend.historic_ingestion.ingest_historic_event` stores one normalized TBA
 Event batch in a caller-selected canonical SQLite database. Reuse the same
 `database_path` to replay or update that Event; ingestion state is not held in
-process memory.
+process memory. API-specific fetching and raw-payload adaptation are upstream:
+callers pass the normalized batch to this interface.
 
 The batch contains one Season, one Event, its Teams, and Matches:
 
@@ -35,21 +36,26 @@ alliances and TBA match-key provenance. Practice and offseason Matches are
 counted as skipped. Required identities, alliance Team references, and
 supported Match types are validated before persistence; invalid batches raise
 `HistoricIngestionValidationError`.
+Any official Match with a result or phase scores must include a timezone-aware
+ISO-8601 `timestamp`; canonical timestamps are normalized to UTC.
 
 The returned `IngestionSummary` reports created, updated, unchanged, skipped,
 failed, and replaced counts. Replaying an identical batch against the same
 database reports its canonical records as unchanged; `failed` and `replaced`
 remain zero for a successful TBA-only ingestion.
+When a higher-priority source replaces a result, `replacements` identifies the
+Match and both the previous and winning source.
 
 ## Team ratings
 
 `backend.ratings.rebuild_ratings` rebuilds persisted all-time and season Elo and
 TrueSkill streams from canonical qualification and playoff Matches with a
 resolved result. Matches without a result are skipped. The deterministic order
-is Season, Event key, qualification before playoff, Match number, then Match
-key. All-time ratings carry across Seasons; each season stream starts from its
-own defaults. Rerunning the rebuild after corrected canonical data replaces the
-rating history rather than applying duplicate updates.
+is Season, UTC Match timestamp, Event key, qualification before playoff, Match
+number, then Match key. All-time ratings carry across Seasons; each season
+stream starts from its own defaults. Rerunning the rebuild after corrected
+canonical data replaces the rating history rather than applying duplicate
+updates.
 
 Elo starts at 1500 with K=32. Alliance expectation is calculated from the mean
 member ratings, and every Team on an alliance receives its same Elo adjustment.
@@ -71,14 +77,13 @@ ratings = get_team_ratings("canonical.sqlite3", team_number=578)
 Pass `phase="autonomous"`, `"teleop"`, or `"end_game"` to query the independent
 phase streams; omitting it keeps the original overall rating query. Canonical
 Match data may provide disjoint alliance totals in `phase_scores`, keyed by
-`red`/`blue` and `autonomous`/`teleop`/`end_game`. When only a TBA
-`score_breakdown` is present, the rebuild recognizes season-specific autonomous,
-teleop, and end-game subtotal keys (including common camelCase and snake_case
-aliases). Teleop is derived by subtracting an available end-game subtotal from
-the teleop subtotal. The mapper does not use `totalPoints`, foul/adjustment
-points, or ranking-point bonuses, and skips phases whose required scores are
-unavailable; it intentionally does not infer a complete schema for every
-historical Season.
+`red`/`blue` and `autonomous`/`teleop`/`end_game`. At ingestion, TBA
+`score_breakdown` fields are normalized by Season into those domain-level
+subtotals. Teleop is derived by subtracting an available end-game subtotal from
+the teleop subtotal. Normalization excludes `totalPoints`, foul/adjustment
+points, and ranking-point bonuses, and leaves phases unavailable when required
+scores are missing; it intentionally does not infer a complete schema for
+every historical Season.
 ## Playoff roster outcomes
 
 Playoff roster data is optional. When available, provide the final alliance
@@ -108,7 +113,8 @@ separate SQLite database. Reuse the same `run_id` and checkpoint database to
 resume; completed Events are not fetched or ingested again. Retries of
 transient source failures are bounded by `max_attempts`. A failed run summary
 includes structured failure details with the Event, source, attempt count, and
-a sanitized reason; adapter exception messages are not retained.
+a sanitized reason and next-step guidance; adapter exception messages are not
+retained.
 
 Adapters may return `SourceResult(unchanged=True)` for an unchanged or 304-style
 response. In that case the canonical ingestor is not called. `RunSummary`

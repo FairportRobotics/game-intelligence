@@ -6,9 +6,12 @@ import json
 import math
 import sqlite3
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from statistics import NormalDist
 from typing import Literal
+
+from backend.match_timestamp import parse_match_timestamp
 
 _ELO_INITIAL = 1500.0
 _ELO_K = 32.0
@@ -43,6 +46,7 @@ class _Match:
     season_year: int
     phase: str
     number: int
+    timestamp: datetime
     red: tuple[int, ...]
     blue: tuple[int, ...]
     red_score: int | None
@@ -145,15 +149,22 @@ def _parse_match(
     blue = _team_numbers(data.get("blue"), key, "blue")
     if set(red).intersection(blue):
         raise RatingDataError(f"Match {key!r} lists a Team on both alliances")
-    phase_scores = _phase_scores(data, season_year)
+    phase_scores = _phase_scores(data)
     if red_score is None and not phase_scores:
         return None
+    try:
+        timestamp = parse_match_timestamp(data.get("timestamp"))
+    except ValueError as error:
+        raise RatingDataError(
+            f"Match {key!r} has no valid timestamp for rating order"
+        ) from error
     return _Match(
         key,
         event_key,
         season_year,
         phase,
         number,
+        timestamp,
         red,
         blue,
         red_score,
@@ -162,9 +173,7 @@ def _parse_match(
     )
 
 
-def _phase_scores(
-    data: dict[str, object], season_year: int
-) -> tuple[tuple[PhaseRating, int, int], ...]:
+def _phase_scores(data: dict[str, object]) -> tuple[tuple[PhaseRating, int, int], ...]:
     scores = data.get("phase_scores")
     if isinstance(scores, dict):
         red_scores = scores.get("red")
@@ -172,7 +181,7 @@ def _phase_scores(
         if not isinstance(red_scores, dict) or not isinstance(blue_scores, dict):
             return ()
         return _validated_phase_scores(red_scores, blue_scores)
-    return _tba_phase_scores(data.get("score_breakdown"), season_year)
+    return ()
 
 
 def _validated_phase_scores(
@@ -187,98 +196,6 @@ def _validated_phase_scores(
         and type(blue_score := blue_scores.get(phase)) is int
         and blue_score >= 0
     )
-
-
-def _tba_phase_scores(
-    breakdown: object, season_year: int
-) -> tuple[tuple[PhaseRating, int, int], ...]:
-    if not isinstance(breakdown, dict):
-        return ()
-    red = breakdown.get("red")
-    blue = breakdown.get("blue")
-    if not isinstance(red, dict) or not isinstance(blue, dict):
-        return ()
-
-    end_game_fields = {
-        2015: (("endgamePoints",), ("endgame_points",)),
-        2016: (("endgamePoints",), ("endgame_points",)),
-        2017: (("endgamePoints",), ("endgame_points",)),
-        2018: (("endgamePoints",), ("endgame_points",)),
-        2019: (
-            ("habClimbPoints",),
-            ("endgamePoints",),
-            ("endgame_points",),
-        ),
-        2020: (("endgamePoints",), ("endgame_points",)),
-        2022: (("endgamePoints",), ("endgame_points",)),
-        2023: (
-            ("endGameChargeStationPoints", "endGameParkPoints"),
-            ("endgamePoints",),
-            ("endgame_points",),
-        ),
-        2024: (
-            (
-                "endGameHarmonyPoints",
-                "endGameNoteInTrapPoints",
-                "endGameOnStagePoints",
-                "endGameParkPoints",
-                "endGameSpotLightBonusPoints",
-            ),
-            ("endgamePoints",),
-            ("endgame_points",),
-        ),
-        2025: (
-            ("endGameBargePoints",),
-            ("endgamePoints",),
-            ("endgame_points",),
-        ),
-        2026: (
-            ("endGameTowerPoints",),
-            ("endgamePoints",),
-            ("endgame_points",),
-        ),
-    }.get(season_year, ())
-    auto_keys = ("autoPoints", "auto_points", "totalAutoPoints")
-    teleop_keys = ("teleopPoints", "teleop_points", "totalTeleopPoints")
-    phase_scores: dict[str, dict[str, object]] = {"red": {}, "blue": {}}
-    for alliance, values in (("red", red), ("blue", blue)):
-        auto_score = _first_score(values, auto_keys)
-        if auto_score is not None:
-            phase_scores[alliance]["autonomous"] = auto_score
-        end_game_score = _first_sum_scores(values, end_game_fields)
-        if end_game_score is not None:
-            phase_scores[alliance]["end_game"] = end_game_score
-        teleop_total = _first_score(values, teleop_keys)
-        if teleop_total is not None and end_game_score is not None:
-            teleop_score = teleop_total - end_game_score
-            if teleop_score >= 0:
-                phase_scores[alliance]["teleop"] = teleop_score
-    return _validated_phase_scores(phase_scores["red"], phase_scores["blue"])
-
-
-def _first_score(values: dict[str, object], keys: tuple[str, ...]) -> int | None:
-    for key in keys:
-        if key in values:
-            score = values[key]
-            return score if type(score) is int and score >= 0 else None
-    return None
-
-
-def _sum_scores(values: dict[str, object], keys: tuple[str, ...]) -> int | None:
-    scores = [_first_score(values, (key,)) for key in keys]
-    if any(score is None for score in scores):
-        return None
-    return sum(score for score in scores if score is not None)
-
-
-def _first_sum_scores(
-    values: dict[str, object], alternatives: tuple[tuple[str, ...], ...]
-) -> int | None:
-    for fields in alternatives:
-        score = _sum_scores(values, fields)
-        if score is not None:
-            return score
-    return None
 
 
 def _load_matches(connection: sqlite3.Connection) -> list[_Match]:
@@ -308,6 +225,7 @@ def _load_matches(connection: sqlite3.Connection) -> list[_Match]:
     matches.sort(
         key=lambda match: (
             match.season_year,
+            match.timestamp,
             match.event_key,
             0 if match.phase == "qualification" else 1,
             match.number,

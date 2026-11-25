@@ -362,6 +362,7 @@ def test_manual_match_result_is_stored_as_a_provisional_source(tmp_path):
                 "number": 1,
                 "red": [578],
                 "blue": [100],
+                "timestamp": "2024-03-15T10:00:00Z",
                 "result": {"red_score": 40, "blue_score": 35},
             }
         ],
@@ -407,6 +408,7 @@ def test_result_precedence_is_independent_of_source_arrival_order(tmp_path):
                 "number": 1,
                 "red": [578],
                 "blue": [100],
+                "timestamp": "2024-03-15T10:00:00Z",
                 "result": {"red_score": 40, "blue_score": 35},
             }
         ],
@@ -435,11 +437,21 @@ def test_result_precedence_is_independent_of_source_arrival_order(tmp_path):
         ).fetchall()
 
     assert manual.replaced == 0
+    assert manual.replacements == ()
     assert tba.replaced == 1
+    assert [
+        (replacement.match_key, replacement.previous_source, replacement.winning_source)
+        for replacement in tba.replacements
+    ] == [("2024nyro_qm1", "manual", "tba")]
     assert tba.affected_matches == ("2024nyro_qm1",)
     assert first.replaced == 1
+    assert [
+        (replacement.match_key, replacement.previous_source, replacement.winning_source)
+        for replacement in first.replacements
+    ] == [("2024nyro_qm1", "tba", "first")]
     assert first.affected_matches == ("2024nyro_qm1",)
     assert lower_priority_replay.replaced == 0
+    assert lower_priority_replay.replacements == ()
     assert lower_priority_replay.affected_matches == ()
     assert json.loads(canonical_match[0])["result"] == {
         "red_score": 60,

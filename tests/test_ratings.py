@@ -1,11 +1,40 @@
 import pytest
 
 from backend.historic_ingestion import (
+    HistoricIngestionValidationError,
     NormalizedHistoricBatch,
     TeamInput,
     ingest_historic_event,
 )
 from backend.ratings import get_team_ratings, rebuild_ratings
+
+
+def test_rated_match_requires_an_offset_aware_timestamp(tmp_path):
+    batch: NormalizedHistoricBatch = {
+        "season": {"year": 2024},
+        "event": {"key": "2024nyro", "name": "Finger Lakes Regional"},
+        "teams": [
+            {"number": 578, "name": "Fairport Robotics"},
+            {"number": 100, "name": "The Wildhats"},
+        ],
+        "matches": [
+            {
+                "key": "2024nyro_qm1",
+                "type": "qualification",
+                "number": 1,
+                "red": [578],
+                "blue": [100],
+                "result": {"red_score": 40, "blue_score": 35},
+            }
+        ],
+        "source": "tba",
+    }
+
+    with pytest.raises(HistoricIngestionValidationError, match="timestamp"):
+        ingest_historic_event(batch, database_path=tmp_path / "canonical.sqlite3")
+    batch["matches"][0]["timestamp"] = "2024-03-15T10:00:00"
+    with pytest.raises(HistoricIngestionValidationError, match="timezone"):
+        ingest_historic_event(batch, database_path=tmp_path / "canonical.sqlite3")
 
 
 def test_rebuilding_ratings_persists_independent_phase_streams(tmp_path):
@@ -24,6 +53,7 @@ def test_rebuilding_ratings_persists_independent_phase_streams(tmp_path):
                 "number": 1,
                 "red": [578],
                 "blue": [100],
+                "timestamp": "2024-03-15T10:00:00Z",
                 "result": {"red_score": 40, "blue_score": 35},
                 "phase_scores": {
                     "red": {"autonomous": 20, "teleop": 15, "end_game": 5},
@@ -71,6 +101,7 @@ def test_rebuilding_phase_ratings_normalizes_tba_subtotals(tmp_path):
                 "number": 1,
                 "red": [578],
                 "blue": [100],
+                "timestamp": "2018-03-15T10:00:00Z",
                 "result": {"red_score": 100, "blue_score": 90},
                 "score_breakdown": {
                     "red": {
@@ -92,7 +123,7 @@ def test_rebuilding_phase_ratings_normalizes_tba_subtotals(tmp_path):
                 },
             }
         ],
-        "source": "first",
+        "source": "tba",
     }
 
     ingest_historic_event(batch, database_path=database)
@@ -127,6 +158,7 @@ def test_rebuilding_ratings_exposes_all_time_and_season_team_streams(tmp_path):
                 "number": 1,
                 "red": [578],
                 "blue": [100, 101],
+                "timestamp": "2024-03-15T10:00:00Z",
                 "result": {"red_score": 40, "blue_score": 35},
             }
         ],
@@ -175,6 +207,7 @@ def test_match_order_is_stable_and_season_streams_reset(tmp_path):
                     "number": 2,
                     "red": [100],
                     "blue": [578],
+                    "timestamp": "2024-03-15T10:00:00Z",
                     "result": {"red_score": 40, "blue_score": 35},
                 },
                 {
@@ -183,6 +216,7 @@ def test_match_order_is_stable_and_season_streams_reset(tmp_path):
                     "number": 1,
                     "red": [578],
                     "blue": [100],
+                    "timestamp": "2024-03-15T11:00:00Z",
                     "result": {"red_score": 40, "blue_score": 35},
                 },
             ],
@@ -202,6 +236,7 @@ def test_match_order_is_stable_and_season_streams_reset(tmp_path):
                     "number": 1,
                     "red": [578],
                     "blue": [100],
+                    "timestamp": "2025-03-15T10:00:00Z",
                     "result": {"red_score": 40, "blue_score": 35},
                 }
             ],
@@ -225,10 +260,11 @@ def test_match_order_is_stable_and_season_streams_reset(tmp_path):
         2025,
     )
     assert tuple(rating.elo for rating in red_ratings) == pytest.approx(
-        (1514.665841, 1498.530498, 1516.0)
+        (1517.334159, 1501.469502, 1516.0)
     )
+    assert red_ratings[1].elo == pytest.approx(1501.469502)
     assert tuple(rating.elo for rating in blue_ratings) == pytest.approx(
-        (1485.334159, 1501.469502, 1484.0)
+        (1482.665841, 1498.530498, 1484.0)
     )
     assert (
         red_ratings[2].trueskill_mu,
@@ -260,6 +296,7 @@ def test_corrected_official_result_rebuilds_history_without_duplicate_updates(
                 "number": 1,
                 "red": [578],
                 "blue": [100],
+                "timestamp": "2024-03-15T10:00:00Z",
                 "result": {"red_score": 40, "blue_score": 35},
             }
         ],
@@ -300,6 +337,7 @@ def test_draw_updates_team_ratings_using_documented_trueskill_defaults(tmp_path)
                 "number": 1,
                 "red": [578],
                 "blue": [100],
+                "timestamp": "2024-03-15T10:00:00Z",
                 "result": {"red_score": 40, "blue_score": 40},
             }
         ],
