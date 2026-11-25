@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up project environment
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install pytest pyrefly ruff
+      - name: Run tests
+        run: ./.venv/bin/python -m pytest
+      - name: Type-check Python
+        run: ./.venv/bin/pyrefly check
+      - name: Lint Python
+        run: ./.venv/bin/python -m ruff check .

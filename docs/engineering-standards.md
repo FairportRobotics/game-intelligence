@@ -75,6 +75,7 @@ A change is complete only when all of the following pass:
 - The full pytest suite.
 - Ruff linting.
 - Python type checking.
+- The pull-request CI workflow, which runs pytest, Pyrefly, and Ruff.
 - After code changes, update the Graphify graph with `./.venv/bin/graphify update .`.
 - A review for public-interface depth and unnecessary cross-module seams.
 
