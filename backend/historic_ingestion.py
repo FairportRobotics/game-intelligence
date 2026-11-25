@@ -2,9 +2,10 @@ import json
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Literal, NotRequired, TypedDict
 
 MatchType = Literal["qualification", "playoff", "practice", "offseason"]
+MatchResultSource = Literal["tba", "TBA", "first", "FIRST", "manual"]
 
 
 class SeasonInput(TypedDict):
@@ -27,6 +28,7 @@ class MatchInput(TypedDict):
     number: int
     red: list[int]
     blue: list[int]
+    result: NotRequired[dict[str, int]]
 
 
 class NormalizedHistoricBatch(TypedDict):
@@ -34,7 +36,7 @@ class NormalizedHistoricBatch(TypedDict):
     event: EventInput
     teams: list[TeamInput]
     matches: list[MatchInput]
-    source: Literal["tba"]
+    source: MatchResultSource
 
 
 @dataclass(frozen=True)
@@ -45,6 +47,7 @@ class IngestionSummary:
     skipped: int = 0
     failed: int = 0
     replaced: int = 0
+    affected_matches: tuple[str, ...] = ()
 
 
 class HistoricIngestionValidationError(ValueError):
@@ -79,6 +82,12 @@ def _initialize_database(connection: sqlite3.Connection) -> None:
             phase TEXT NOT NULL,
             data TEXT NOT NULL,
             provenance TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS match_results (
+            match_key TEXT NOT NULL REFERENCES matches(key) ON DELETE CASCADE,
+            source TEXT NOT NULL,
+            data TEXT NOT NULL,
+            PRIMARY KEY (match_key, source)
         );
         CREATE TABLE IF NOT EXISTS match_alliance_teams (
             match_key TEXT NOT NULL REFERENCES matches(key) ON DELETE CASCADE,
@@ -137,8 +146,10 @@ def _persist(
 def _validate_batch(batch: NormalizedHistoricBatch) -> None:
     if not isinstance(batch, dict):
         raise HistoricIngestionValidationError("batch must be a mapping")
-    if batch.get("source") != "tba":
-        raise HistoricIngestionValidationError("source must be 'tba'")
+    if batch.get("source") not in {"tba", "TBA", "first", "FIRST", "manual"}:
+        raise HistoricIngestionValidationError(
+            "source must be 'FIRST', 'TBA', or 'manual'"
+        )
     season = batch.get("season")
     if not isinstance(season, dict) or not isinstance(season.get("year"), int):
         raise HistoricIngestionValidationError(
@@ -228,6 +239,22 @@ def _validate_batch(batch: NormalizedHistoricBatch) -> None:
             raise HistoricIngestionValidationError(
                 f"match {key!r} places a Team on both alliances"
             )
+        if "result" in match:
+            result = match["result"]
+            if (
+                not isinstance(result, dict)
+                or set(result) != {"red_score", "blue_score"}
+                or any(
+                    not isinstance(result[alliance], int)
+                    or isinstance(result[alliance], bool)
+                    or result[alliance] < 0
+                    for alliance in ("red_score", "blue_score")
+                )
+            ):
+                raise HistoricIngestionValidationError(
+                    f"match {key!r} result must contain non-negative integer "
+                    "red_score and blue_score values"
+                )
 
 
 def ingest_historic_event(
@@ -240,9 +267,11 @@ def ingest_historic_event(
     try:
         _initialize_database(connection)
         counts = {"created": 0, "unchanged": 0, "updated": 0}
+        affected_matches: list[str] = []
         with connection:
             season = normalized_batch["season"]
             event = normalized_batch["event"]
+            source = normalized_batch["source"].lower()
             counts[
                 _persist(
                     connection,
@@ -289,41 +318,105 @@ def ingest_historic_event(
                         (event["key"], team_number),
                     )
             skipped = 0
+            replaced = 0
             for match in normalized_batch["matches"]:
                 if match["type"] in {"practice", "offseason"}:
                     skipped += 1
                     continue
                 phase = match["type"]
-                data = _json_data(match)
-                provenance = _json_data(
-                    {"source": normalized_batch["source"], "source_key": match["key"]}
-                )
-                existing = connection.execute(
-                    "SELECT data, provenance FROM matches WHERE key = ?",
+                match_data = dict(match)
+                result = match_data.pop("result", None)
+                prior_canonical = connection.execute(
+                    "SELECT data, provenance, phase, event_key FROM matches "
+                    "WHERE key = ?",
                     (match["key"],),
                 ).fetchone()
-                if existing is None:
+                if prior_canonical is None:
                     connection.execute(
                         "INSERT INTO matches "
                         "(key, event_key, phase, data, provenance) "
                         "VALUES (?, ?, ?, ?, ?)",
-                        (match["key"], event["key"], phase, data, provenance),
+                        (
+                            match["key"],
+                            event["key"],
+                            phase,
+                            _json_data(match_data),
+                            _json_data({"source": source, "source_key": match["key"]}),
+                        ),
                     )
+                previous_winner = connection.execute(
+                    "SELECT source, data FROM match_results WHERE match_key = ? "
+                    "ORDER BY CASE source WHEN 'manual' THEN 0 WHEN 'tba' THEN 1 "
+                    "WHEN 'first' THEN 2 ELSE -1 END DESC LIMIT 1",
+                    (match["key"],),
+                ).fetchone()
+                if result is not None:
+                    result_data = _json_data(result)
+                    previous_result = connection.execute(
+                        "SELECT data FROM match_results "
+                        "WHERE match_key = ? AND source = ?",
+                        (match["key"], source),
+                    ).fetchone()
+                    connection.execute(
+                        "INSERT INTO match_results (match_key, source, data) "
+                        "VALUES (?, ?, ?) ON CONFLICT (match_key, source) "
+                        "DO UPDATE SET data = excluded.data",
+                        (match["key"], source, result_data),
+                    )
+                    if (
+                        previous_result != (result_data,)
+                        and previous_winner is not None
+                    ):
+                        replaced += int(
+                            source != previous_winner[0]
+                            and {"manual": 0, "tba": 1, "first": 2}[source]
+                            > {"manual": 0, "tba": 1, "first": 2}[previous_winner[0]]
+                        )
+                winner = connection.execute(
+                    "SELECT source, data FROM match_results WHERE match_key = ? "
+                    "ORDER BY CASE source WHEN 'manual' THEN 0 WHEN 'tba' THEN 1 "
+                    "WHEN 'first' THEN 2 ELSE -1 END DESC LIMIT 1",
+                    (match["key"],),
+                ).fetchone()
+                canonical_data = dict(match_data)
+                canonical_source = source
+                if winner is not None:
+                    canonical_source = winner[0]
+                    canonical_data["result"] = json.loads(winner[1])
+                canonical_provenance = _json_data(
+                    {"source": canonical_source, "source_key": match["key"]}
+                )
+                canonical_json = _json_data(canonical_data)
+                canonical_record = (
+                    canonical_json,
+                    canonical_provenance,
+                    phase,
+                    event["key"],
+                )
+                if prior_canonical is None:
                     state = "created"
-                elif existing == (data, provenance):
+                    connection.execute(
+                        "UPDATE matches SET data = ?, provenance = ?, phase = ?, "
+                        "event_key = ? WHERE key = ?",
+                        (*canonical_record, match["key"]),
+                    )
+                elif prior_canonical == canonical_record:
                     state = "unchanged"
                 else:
-                    connection.execute(
-                        "UPDATE matches SET event_key = ?, phase = ?, data = ?, "
-                        "provenance = ? WHERE key = ?",
-                        (event["key"], phase, data, provenance, match["key"]),
-                    )
                     state = "updated"
+                    connection.execute(
+                        "UPDATE matches SET data = ?, provenance = ?, phase = ?, "
+                        "event_key = ? WHERE key = ?",
+                        (*canonical_record, match["key"]),
+                    )
+                counts[state] += 1
+                if prior_canonical != canonical_record and winner is not None:
+                    affected_matches.append(match["key"])
+                if state == "updated":
                     connection.execute(
                         "DELETE FROM match_alliance_teams WHERE match_key = ?",
                         (match["key"],),
                     )
-                counts[state] += 1
                 for alliance in ("red", "blue"):
                     for position, team_number in enumerate(match[alliance], start=1):
                         connection.execute(
@@ -337,6 +430,8 @@ def ingest_historic_event(
             unchanged=counts["unchanged"],
             updated=counts["updated"],
             skipped=skipped,
+            replaced=replaced,
+            affected_matches=tuple(sorted(affected_matches)),
         )
     finally:
         connection.close()
